@@ -10,7 +10,6 @@ import {
   Crown,
   Play,
   Share2,
-  ArrowLeft,
   Loader2,
   LogOut,
   HelpCircle,
@@ -19,12 +18,12 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
-  Sparkles,
   Lock,
   RefreshCw,
   Eye,
   RotateCcw,
   AlertTriangle,
+  WifiOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
@@ -66,6 +65,7 @@ export default function RoomLobbyPage({
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
+  const [isHostDisconnected, setIsHostDisconnected] = useState(false);
 
   // Copy states
   const [isCopiedCode, setIsCopiedCode] = useState(false);
@@ -79,16 +79,20 @@ export default function RoomLobbyPage({
   const [selectedInitialChoice, setSelectedInitialChoice] = useState<ChoiceLetter | null>(null);
   const [isInitialLocked, setIsInitialLocked] = useState(false);
   const [answeredCount, setAnsweredCount] = useState(0);
+  const [isSubmittingInitial, setIsSubmittingInitial] = useState(false);
 
   // Discussion Phase
   const [isReady, setIsReady] = useState(false);
   const [readyCount, setReadyCount] = useState(0);
+  const [isUpdatingReady, setIsUpdatingReady] = useState(false);
+  const [isProceedingToChange, setIsProceedingToChange] = useState(false);
 
   // Change Phase
   const [changeMode, setChangeMode] = useState<"keep" | "change" | null>(null);
   const [selectedFinalChoice, setSelectedFinalChoice] = useState<ChoiceLetter | null>(null);
   const [isFinalLocked, setIsFinalLocked] = useState(false);
   const [finalLockedCount, setFinalLockedCount] = useState(0);
+  const [isSubmittingFinal, setIsSubmittingFinal] = useState(false);
 
   // Reveal Phase
   const [revealData, setRevealData] = useState<RevealData | null>(null);
@@ -101,7 +105,7 @@ export default function RoomLobbyPage({
   const [isStartingReview, setIsStartingReview] = useState(false);
   const [isExitingReview, setIsExitingReview] = useState(false);
 
-  // Fetch initial room details
+  // Fetch room details
   const loadRoom = useCallback(async () => {
     try {
       const storedPlayerId =
@@ -119,6 +123,10 @@ export default function RoomLobbyPage({
       setRoom(details.room);
       setMock(details.mock);
       setPlayers(details.players);
+
+      // Check if host is present in players list
+      const hostPresent = details.players.some((p) => p.isHost);
+      setIsHostDisconnected(!hostPresent);
 
       if (storedPlayerId) {
         setCurrentPlayerId(storedPlayerId);
@@ -141,6 +149,25 @@ export default function RoomLobbyPage({
 
   useEffect(() => {
     loadRoom();
+  }, [loadRoom]);
+
+  // Automatic Reconnection & Silent State Resync on Tab Focus / Window Online
+  useEffect(() => {
+    const handleSync = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        loadRoom();
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleSync);
+    window.addEventListener("focus", handleSync);
+    window.addEventListener("online", handleSync);
+
+    return () => {
+      window.removeEventListener("visibilitychange", handleSync);
+      window.removeEventListener("focus", handleSync);
+      window.removeEventListener("online", handleSync);
+    };
   }, [loadRoom]);
 
   // Load summary when room reaches FINISHED
@@ -185,13 +212,20 @@ export default function RoomLobbyPage({
           setPlayers((prev) => {
             const exists = prev.some((p) => p.id === event.player.id);
             if (exists) return prev;
+            if (event.player.isHost) setIsHostDisconnected(false);
             return [...prev, event.player];
           });
           info(`${event.player.nickname} joined the room!`);
           break;
 
         case "PLAYER_LEFT":
-          setPlayers((prev) => prev.filter((p) => p.id !== event.playerId));
+          setPlayers((prev) => {
+            const leaving = prev.find((p) => p.id === event.playerId);
+            if (leaving?.isHost) {
+              setIsHostDisconnected(true);
+            }
+            return prev.filter((p) => p.id !== event.playerId);
+          });
           break;
 
         case "ROOM_STARTED":
@@ -351,12 +385,18 @@ export default function RoomLobbyPage({
   // Leave room
   const handleLeaveRoom = async () => {
     if (currentPlayerId) {
-      await leaveRoom(roomCode, currentPlayerId);
-      await broadcastRoomEvent(roomCode, {
-        type: "PLAYER_LEFT",
-        playerId: currentPlayerId,
-      });
-      sessionStorage.removeItem(`necessaire_player_${roomCode}`);
+      try {
+        await leaveRoom(roomCode, currentPlayerId);
+        await broadcastRoomEvent(roomCode, {
+          type: "PLAYER_LEFT",
+          playerId: currentPlayerId,
+        });
+      } catch (err) {
+        console.warn("Leave room notification failed", err);
+      } finally {
+        sessionStorage.removeItem(`necessaire_player_${roomCode}`);
+        sessionStorage.removeItem(`necessaire_nickname_${roomCode}`);
+      }
     }
     router.push("/join");
   };
@@ -382,7 +422,7 @@ export default function RoomLobbyPage({
   const handleLockInitialAnswer = async () => {
     if (!selectedInitialChoice || !currentQuestion || !currentPlayerId) return;
 
-    setIsInitialLocked(true);
+    setIsSubmittingInitial(true);
     try {
       const res = await submitInitialAnswer(
         roomCode,
@@ -392,16 +432,15 @@ export default function RoomLobbyPage({
       );
 
       if (res.success) {
+        setIsInitialLocked(true);
         setAnsweredCount(res.answeredCount);
 
-        // Broadcast progress (never broadcasts the chosen option letter)
         await broadcastRoomEvent(roomCode, {
           type: "ANSWER_PROGRESS",
           answeredCount: res.answeredCount,
           totalPlayers: res.totalPlayers,
         });
 
-        // If everyone answered, transition to DISCUSSION
         if (res.allAnswered) {
           await broadcastRoomEvent(roomCode, {
             type: "STATUS_CHANGED",
@@ -410,10 +449,13 @@ export default function RoomLobbyPage({
           setRoom((prev) => (prev ? { ...prev, status: "DISCUSSION" } : null));
           info("Everyone has answered! Discuss your answers in Discord.", "Discussion Time");
         }
+      } else {
+        error(res.error || "Failed to lock answer. Please try again.");
       }
     } catch (err: any) {
-      error(err.message || "Failed to lock answer.");
-      setIsInitialLocked(false);
+      error(err.message || "Network error locking answer.");
+    } finally {
+      setIsSubmittingInitial(false);
     }
   };
 
@@ -423,7 +465,7 @@ export default function RoomLobbyPage({
   const handleToggleReady = async () => {
     if (!currentQuestion || !currentPlayerId) return;
     const nextReady = !isReady;
-    setIsReady(nextReady);
+    setIsUpdatingReady(true);
 
     try {
       const res = await setPlayerReady(
@@ -434,29 +476,41 @@ export default function RoomLobbyPage({
       );
 
       if (res.success) {
+        setIsReady(nextReady);
         setReadyCount(res.readyCount);
         await broadcastRoomEvent(roomCode, {
           type: "READY_PROGRESS",
           readyCount: res.readyCount,
           totalPlayers: res.totalPlayers,
         });
+      } else {
+        error(res.error || "Failed to update ready state.");
       }
     } catch (err: any) {
-      error(err.message || "Failed to update ready state.");
+      error(err.message || "Failed to update ready status.");
+    } finally {
+      setIsUpdatingReady(false);
     }
   };
 
   const handleProceedToChange = async () => {
     if (!isHost) return;
+    setIsProceedingToChange(true);
     try {
-      await transitionToChangePhase(roomCode);
-      await broadcastRoomEvent(roomCode, {
-        type: "STATUS_CHANGED",
-        status: "CHANGING",
-      });
-      setRoom((prev) => (prev ? { ...prev, status: "CHANGING" } : null));
+      const res = await transitionToChangePhase(roomCode);
+      if (res.success) {
+        await broadcastRoomEvent(roomCode, {
+          type: "STATUS_CHANGED",
+          status: "CHANGING",
+        });
+        setRoom((prev) => (prev ? { ...prev, status: "CHANGING" } : null));
+      } else {
+        error(res.error || "Failed to proceed to Change phase.");
+      }
     } catch (err: any) {
-      error(err.message || "Failed to proceed to Change phase.");
+      error(err.message || "Error transitioning to Change phase.");
+    } finally {
+      setIsProceedingToChange(false);
     }
   };
 
@@ -476,7 +530,7 @@ export default function RoomLobbyPage({
       return;
     }
 
-    setIsFinalLocked(true);
+    setIsSubmittingFinal(true);
     try {
       const res = await submitFinalAnswer(
         roomCode,
@@ -486,6 +540,7 @@ export default function RoomLobbyPage({
       );
 
       if (res.success) {
+        setIsFinalLocked(true);
         setFinalLockedCount(res.finalLockedCount);
         await broadcastRoomEvent(roomCode, {
           type: "FINAL_LOCK_PROGRESS",
@@ -494,10 +549,13 @@ export default function RoomLobbyPage({
         });
 
         success("Final answer locked! Waiting for host to reveal.", "Locked");
+      } else {
+        error(res.error || "Failed to submit final answer.");
       }
     } catch (err: any) {
       error(err.message || "Failed to final lock answer.");
-      setIsFinalLocked(false);
+    } finally {
+      setIsSubmittingFinal(false);
     }
   };
 
@@ -551,6 +609,8 @@ export default function RoomLobbyPage({
           prev ? { ...prev, currentQuestion: nextNum, status: nextStatus } : null
         );
         resetQuestionStates();
+      } else {
+        error(res.error || "Failed to advance question.");
       }
     } catch (err: any) {
       error(err.message || "Failed to advance question.");
@@ -620,6 +680,8 @@ export default function RoomLobbyPage({
         );
         resetQuestionStates();
         info("Returned to test summary.", "Summary");
+      } else {
+        error(res.error || "Failed to exit review mode.");
       }
     } catch (err: any) {
       error(err.message || "Failed to exit review mode.");
@@ -632,7 +694,7 @@ export default function RoomLobbyPage({
     return (
       <div className="flex-1 flex flex-col justify-center items-center py-24 space-y-4">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        <p className="text-xs text-gray-400">Loading room {roomCode}...</p>
+        <p className="text-xs text-gray-400 font-mono tracking-wider">CONNECTING TO ROOM {roomCode}...</p>
       </div>
     );
   }
@@ -663,12 +725,12 @@ export default function RoomLobbyPage({
   // ==========================================
   if (room.status === "LOBBY") {
     return (
-      <div className="flex-1 max-w-3xl mx-auto w-full px-4 py-8 sm:py-14 space-y-8">
+      <div className="flex-1 max-w-3xl mx-auto w-full px-3 sm:px-6 py-6 sm:py-14 space-y-6 sm:space-y-8 pb-32 sm:pb-16">
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={handleLeaveRoom}
-            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-error transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-error transition-colors p-1"
           >
             <LogOut className="w-4 h-4" />
             <span>Leave Lobby</span>
@@ -705,11 +767,12 @@ export default function RoomLobbyPage({
               <span className="text-gray-500">• {mock.questions.length} questions</span>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 pt-2 w-full sm:w-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleCopyCode}
+                className="w-full"
                 leftIcon={
                   isCopiedCode ? (
                     <Check className="w-4 h-4 text-success" />
@@ -724,6 +787,7 @@ export default function RoomLobbyPage({
                 variant="outline"
                 size="sm"
                 onClick={handleCopyLink}
+                className="w-full"
                 leftIcon={
                   isCopiedLink ? (
                     <Check className="w-4 h-4 text-success" />
@@ -740,19 +804,19 @@ export default function RoomLobbyPage({
 
         {/* Players List Card */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between py-4">
+          <CardHeader className="flex flex-row items-center justify-between py-4 px-4 sm:px-6">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-primary-accent" />
               <CardTitle className="text-base sm:text-lg">
                 Players in Room ({players.length})
               </CardTitle>
             </div>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 hidden sm:inline">
               Hop on Discord while waiting
             </span>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
               {players.map((p) => {
                 const isMe = p.id === currentPlayerId;
 
@@ -796,14 +860,14 @@ export default function RoomLobbyPage({
         </Card>
 
         {/* Action / Waiting Footer */}
-        <div className="p-6 rounded-xl bg-card border border-card-border flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="p-4 sm:p-6 rounded-xl bg-card border border-card-border flex flex-col sm:flex-row items-center justify-between gap-4">
           {isHost ? (
             <>
-              <div>
+              <div className="text-center sm:text-left">
                 <h4 className="text-sm font-semibold text-white">
                   You are the Host
                 </h4>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 mt-0.5">
                   When everyone is ready in Discord, start the mock test.
                 </p>
               </div>
@@ -821,7 +885,7 @@ export default function RoomLobbyPage({
           ) : (
             <div className="w-full flex items-center justify-center gap-3 py-2">
               <div className="w-3 h-3 rounded-full bg-primary animate-ping" />
-              <span className="text-sm text-gray-300 font-medium">
+              <span className="text-sm text-gray-300 font-medium text-center">
                 Waiting for host to start the test...
               </span>
             </div>
@@ -836,8 +900,8 @@ export default function RoomLobbyPage({
   // ==========================================
   if (room.status === "FINISHED") {
     return (
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-12 sm:py-16 space-y-8 text-center">
-        <Card className="p-8 sm:p-10 space-y-6 border-card-border shadow-2xl">
+      <div className="flex-1 max-w-2xl mx-auto w-full px-3 sm:px-6 py-8 sm:py-16 space-y-6 text-center pb-32 sm:pb-16">
+        <Card className="p-6 sm:p-10 space-y-6 border-card-border shadow-2xl">
           {/* Header */}
           <div className="space-y-1">
             <span className="text-xs font-mono font-semibold tracking-widest text-primary-accent uppercase">
@@ -898,10 +962,10 @@ export default function RoomLobbyPage({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                          <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
                             Q{nr.originalQuestionNumber}
                           </span>
-                          <span className="text-xs font-medium text-gray-400 truncate">
+                          <span className="text-xs font-medium text-gray-400 truncate block">
                             {nr.questionText}
                           </span>
                         </div>
@@ -922,7 +986,7 @@ export default function RoomLobbyPage({
                         size="md"
                         onClick={handleLaunchReview}
                         isLoading={isStartingReview}
-                        className="w-full shadow-glow"
+                        className="w-full shadow-glow py-3"
                         leftIcon={<RotateCcw className="w-4 h-4" />}
                       >
                         Review These Questions ({summary.needsReviewQuestions.length})
@@ -943,14 +1007,14 @@ export default function RoomLobbyPage({
           )}
 
           {/* Quick Exit Links */}
-          <div className="pt-4 border-t border-card-border/60 flex flex-wrap justify-center gap-3">
-            <Link href={`/mock/${mock.id}`}>
-              <Button variant="outline" size="sm">
+          <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row justify-center gap-3">
+            <Link href={`/mock/${mock.id}`} className="w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="w-full">
                 Review Full Answer Key
               </Button>
             </Link>
-            <Link href="/">
-              <Button variant="secondary" size="sm">
+            <Link href="/" className="w-full sm:w-auto">
+              <Button variant="secondary" size="sm" className="w-full">
                 Back to Home
               </Button>
             </Link>
@@ -973,11 +1037,27 @@ export default function RoomLobbyPage({
   ];
 
   return (
-    <div className="flex-1 max-w-3xl mx-auto w-full px-4 py-8 sm:py-12 space-y-6">
+    <div className="flex-1 max-w-3xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-10 space-y-4 sm:space-y-6 pb-32 sm:pb-16">
+      {/* Host Disconnected Alert Banner */}
+      {isHostDisconnected && !isHost && (
+        <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs sm:text-sm flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <WifiOff className="w-4 h-4 shrink-0 text-amber-400" />
+            <span>Host disconnected. Waiting for host to reconnect...</span>
+          </div>
+          <button
+            onClick={handleLeaveRoom}
+            className="text-xs text-gray-400 hover:text-white underline shrink-0"
+          >
+            Leave
+          </button>
+        </div>
+      )}
+
       {/* Top Header: Question Progress & Room Status */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-card-border/60 pb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-bold text-white font-mono">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-card-border/60 pb-3 sm:pb-4">
+        <div className="flex items-center gap-2.5">
+          <span className="text-base sm:text-lg font-bold text-white font-mono">
             {isReviewMode ? "REVIEW Q" : "Q"} {currentQIndex + 1} / {totalQuestions}
           </span>
           {isReviewMode && (
@@ -993,24 +1073,24 @@ export default function RoomLobbyPage({
         {/* Phase Pill */}
         <div className="flex items-center gap-2">
           {room.status === "ANSWERING" && (
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/20 text-primary-accent border border-primary/30 uppercase tracking-wider">
-              1. Answering Phase
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-primary/20 text-primary-accent border border-primary/30 uppercase tracking-wider">
+              1. Answer Phase
             </span>
           )}
           {room.status === "DISCUSSION" && (
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider flex items-center gap-1.5">
               <DiscordIcon className="w-3.5 h-3.5 text-[#5865F2]" />
-              2. Discord Discussion
+              2. Discuss in Discord
             </span>
           )}
           {room.status === "CHANGING" && (
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider flex items-center gap-1.5">
               <RefreshCw className="w-3.5 h-3.5" />
               3. Change or Keep
             </span>
           )}
           {room.status === "REVEAL" && (
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-success/20 text-success border border-success/30 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-success/20 text-success border border-success/30 uppercase tracking-wider flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5" />
               4. Reveal & Learn
             </span>
@@ -1020,13 +1100,13 @@ export default function RoomLobbyPage({
 
       {/* Main Question Card */}
       <Card className="border-card-border shadow-xl">
-        <CardHeader className="bg-card-border/20 py-4 px-6">
-          <CardTitle className="text-lg sm:text-xl text-white font-medium leading-relaxed whitespace-pre-line">
+        <CardHeader className="bg-card-border/20 py-4 px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-xl text-white font-medium leading-relaxed whitespace-pre-line">
             {currentQuestion.questionText}
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="p-4 sm:p-6 space-y-6">
           {/* =======================================================
               PHASE 1: ANSWERING
               ======================================================= */}
@@ -1040,16 +1120,16 @@ export default function RoomLobbyPage({
                     <button
                       key={c.letter}
                       type="button"
-                      disabled={isInitialLocked}
+                      disabled={isInitialLocked || isSubmittingInitial}
                       onClick={() => setSelectedInitialChoice(c.letter)}
-                      className={`w-full text-left p-4 rounded-xl border flex items-start gap-3.5 transition-all select-none ${
+                      className={`w-full text-left p-3.5 sm:p-4 rounded-xl border flex items-start gap-3.5 transition-all select-none min-h-[58px] sm:min-h-[64px] active:scale-[0.99] ${
                         isSelected
                           ? "border-primary bg-primary/15 text-white shadow-glow-sm"
                           : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-600 hover:bg-card/50"
                       } ${isInitialLocked ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
                     >
                       <span
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 transition-colors ${
                           isSelected
                             ? "bg-primary text-white"
                             : "bg-card-border/60 text-gray-400"
@@ -1057,7 +1137,7 @@ export default function RoomLobbyPage({
                       >
                         {c.letter}
                       </span>
-                      <span className="text-sm pt-0.5 leading-snug">{c.text}</span>
+                      <span className="text-sm sm:text-base pt-1 leading-snug">{c.text}</span>
                     </button>
                   );
                 })}
@@ -1083,8 +1163,9 @@ export default function RoomLobbyPage({
                     variant="primary"
                     size="md"
                     disabled={!selectedInitialChoice}
+                    isLoading={isSubmittingInitial}
                     onClick={handleLockInitialAnswer}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto py-3 text-sm font-semibold"
                     leftIcon={<Lock className="w-4 h-4" />}
                   >
                     Lock Answer
@@ -1103,14 +1184,14 @@ export default function RoomLobbyPage({
               ======================================================= */}
           {room.status === "DISCUSSION" && (
             <div className="space-y-6 py-2 text-center">
-              <div className="p-6 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 space-y-3">
+              <div className="p-5 sm:p-6 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 space-y-3">
                 <div className="w-12 h-12 rounded-full bg-[#5865F2]/20 text-[#5865F2] flex items-center justify-center mx-auto">
                   <DiscordIcon className="w-6 h-6" />
                 </div>
-                <h3 className="text-xl font-bold text-white">
+                <h3 className="text-lg sm:text-xl font-bold text-white">
                   Everyone has answered.
                 </h3>
-                <p className="text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
+                <p className="text-xs sm:text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
                   Hop on your Discord call now to discuss why you chose your answer and debate the concepts together!
                 </p>
               </div>
@@ -1121,10 +1202,11 @@ export default function RoomLobbyPage({
                   <strong className="text-white">{readyCount}</strong> / {players.length} players ready to revise
                 </div>
 
-                <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
                   <Button
                     variant={isReady ? "secondary" : "primary"}
                     size="md"
+                    isLoading={isUpdatingReady}
                     onClick={handleToggleReady}
                     className="w-full sm:w-auto"
                     leftIcon={isReady ? <Check className="w-4 h-4 text-success" /> : undefined}
@@ -1137,6 +1219,7 @@ export default function RoomLobbyPage({
                     <Button
                       variant="primary"
                       size="md"
+                      isLoading={isProceedingToChange}
                       onClick={handleProceedToChange}
                       className="w-full sm:w-auto shadow-glow"
                       rightIcon={<ArrowRight className="w-4 h-4" />}
@@ -1164,14 +1247,14 @@ export default function RoomLobbyPage({
               {/* Choice Mode Selection: Keep or Change */}
               {!isFinalLocked ? (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => {
                         setChangeMode("keep");
                         setSelectedFinalChoice(selectedInitialChoice);
                       }}
-                      className={`p-3.5 rounded-xl border text-sm font-semibold transition-all ${
+                      className={`p-4 rounded-xl border text-sm font-semibold transition-all min-h-[54px] active:scale-[0.99] ${
                         changeMode === "keep"
                           ? "border-primary bg-primary/20 text-white shadow-glow-sm"
                           : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-500"
@@ -1183,7 +1266,7 @@ export default function RoomLobbyPage({
                     <button
                       type="button"
                       onClick={() => setChangeMode("change")}
-                      className={`p-3.5 rounded-xl border text-sm font-semibold transition-all ${
+                      className={`p-4 rounded-xl border text-sm font-semibold transition-all min-h-[54px] active:scale-[0.99] ${
                         changeMode === "change"
                           ? "border-primary bg-primary/20 text-white shadow-glow-sm"
                           : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-500"
@@ -1208,7 +1291,7 @@ export default function RoomLobbyPage({
                               key={c.letter}
                               type="button"
                               onClick={() => setSelectedFinalChoice(c.letter)}
-                              className={`p-3 rounded-lg border text-left text-xs sm:text-sm flex items-start gap-2.5 transition-all ${
+                              className={`p-3 rounded-lg border text-left text-xs sm:text-sm flex items-start gap-2.5 transition-all min-h-[48px] ${
                                 isSelected
                                   ? "border-primary bg-primary/20 text-white"
                                   : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-600"
@@ -1232,6 +1315,7 @@ export default function RoomLobbyPage({
                       variant="primary"
                       size="md"
                       disabled={!changeMode || (changeMode === "change" && !selectedFinalChoice)}
+                      isLoading={isSubmittingFinal}
                       onClick={handleFinalLock}
                       className="w-full sm:w-auto"
                       leftIcon={<Lock className="w-4 h-4" />}
@@ -1254,7 +1338,7 @@ export default function RoomLobbyPage({
 
               {/* Host Reveal Action */}
               {isHost && (
-                <div className="pt-4 border-t border-card-border/60 flex items-center justify-between">
+                <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <span className="text-xs text-gray-400">
                     Host Control: {finalLockedCount} / {players.length} players locked
                   </span>
@@ -1263,7 +1347,7 @@ export default function RoomLobbyPage({
                     size="md"
                     onClick={handleRevealAnswer}
                     isLoading={isRevealing}
-                    className="shadow-glow"
+                    className="w-full sm:w-auto shadow-glow"
                     leftIcon={<Eye className="w-4 h-4" />}
                   >
                     Reveal Answer
@@ -1348,7 +1432,7 @@ export default function RoomLobbyPage({
                       size="lg"
                       onClick={handleBackToSummary}
                       isLoading={isExitingReview}
-                      className="shadow-glow"
+                      className="w-full sm:w-auto shadow-glow"
                       leftIcon={<CheckCircle2 className="w-4 h-4" />}
                     >
                       Back to Summary
@@ -1359,7 +1443,7 @@ export default function RoomLobbyPage({
                       size="lg"
                       onClick={handleNextQuestion}
                       isLoading={isAdvancing}
-                      className="shadow-glow"
+                      className="w-full sm:w-auto shadow-glow"
                       rightIcon={<ArrowRight className="w-4 h-4" />}
                     >
                       {currentQIndex + 1 >= totalQuestions ? "Finish Mock" : "Next Question"}

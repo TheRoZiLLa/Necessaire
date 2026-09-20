@@ -141,6 +141,10 @@ function JoinRoomForm() {
               className="font-mono tracking-widest uppercase text-base placeholder:normal-case placeholder:font-sans placeholder:tracking-normal font-bold"
               maxLength={8}
               autoFocus={!roomCode}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="text"
             />
 
             {/* Nickname */}
@@ -156,6 +160,9 @@ function JoinRoomForm() {
               leftIcon={<User className="w-4 h-4" />}
               maxLength={20}
               autoFocus={Boolean(roomCode)}
+              autoCapitalize="words"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </CardContent>
 
