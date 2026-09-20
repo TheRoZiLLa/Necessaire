@@ -23,7 +23,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import { parseQuestionsText, validateQuestionDraft, AI_PROMPT_TEMPLATE } from "@/lib/parser";
+import {
+  parseQuestionsText,
+  validateQuestionDraft,
+  AI_PROMPT_TEMPLATE,
+  AI_PROMPT_TEMPLATE_TH,
+  SAMPLE_QUESTIONS_TH,
+  THAI_CHOICE_MAP,
+} from "@/lib/parser";
 import { saveMockWithQuestions } from "@/lib/storage";
 import { ChoiceLetter, ParsedQuestionDraft } from "@/types";
 
@@ -44,21 +51,36 @@ export default function CreateMockPage() {
   const [isIncompleteModalOpen, setIsIncompleteModalOpen] = useState(false);
   const [incompleteCount, setIncompleteCount] = useState(0);
 
+  // Copy states
+  const [copiedLang, setCopiedLang] = useState<"th" | "en" | null>(null);
+
   // Copy AI Prompt
-  const handleCopyPrompt = async () => {
+  const handleCopyPrompt = async (lang: "th" | "en" = "th") => {
     try {
-      await navigator.clipboard.writeText(AI_PROMPT_TEMPLATE);
-      setIsCopied(true);
-      success("AI prompt copied to clipboard! Paste it into ChatGPT, Claude, or Gemini.", "Copied");
-      setTimeout(() => setIsCopied(false), 2500);
+      const template = lang === "th" ? AI_PROMPT_TEMPLATE_TH : AI_PROMPT_TEMPLATE;
+      await navigator.clipboard.writeText(template);
+      setCopiedLang(lang);
+      success(
+        lang === "th"
+          ? "คัดลอก AI Prompt (ภาษาไทย: ก ข ค ง) แล้ว! นำไปวางใน ChatGPT หรือ Claude ได้เลย"
+          : "English AI Prompt copied to clipboard!",
+        "Copied"
+      );
+      setTimeout(() => setCopiedLang(null), 2500);
     } catch {
       error("Failed to copy to clipboard", "Error");
     }
   };
 
   // Sample data insertion
-  const handleInsertSample = () => {
-    const sample = `1. ______ is your best friend?
+  const handleInsertSample = (lang: "th" | "en" = "th") => {
+    if (lang === "th") {
+      setRawText(SAMPLE_QUESTIONS_TH);
+      if (!title) setTitle("ข้อสอบจำลองความรู้ทั่วไป (ชุดที่ 1)");
+      if (!subject) setSubject("ความรู้ทั่วไป / สังคมศึกษา");
+      info("โหลดตัวอย่างข้อสอบภาษาไทยแล้ว กด 'Parse Questions' เพื่อดูตัวอย่าง", "Sample Loaded");
+    } else {
+      const sample = `1. ______ is your best friend?
    A. Who
    B. Whom
    C. Whose
@@ -74,10 +96,11 @@ export default function CreateMockPage() {
    Answer: C
    Explanation: Whose ใช้แสดงความเป็นเจ้าของ`;
 
-    setRawText(sample);
-    if (!title) setTitle("English Grammar Diagnostic");
-    if (!subject) setSubject("English 101");
-    info("Sample questions loaded. Click 'Parse Questions' to preview.", "Sample Loaded");
+      setRawText(sample);
+      if (!title) setTitle("English Grammar Diagnostic");
+      if (!subject) setSubject("English 101");
+      info("Sample questions loaded. Click 'Parse Questions' to preview.", "Sample Loaded");
+    }
   };
 
   // Parse questions from raw textarea
@@ -264,23 +287,42 @@ export default function CreateMockPage() {
           </p>
         </div>
 
-        {/* Copy AI Prompt Button */}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleCopyPrompt}
-          className="shrink-0"
-          leftIcon={
-            isCopied ? (
-              <Check className="w-4 h-4 text-success" />
-            ) : (
-              <Copy className="w-4 h-4 text-primary-accent" />
-            )
-          }
-        >
-          {isCopied ? "Prompt Copied!" : "Copy AI Prompt"}
-        </Button>
+        {/* Copy AI Prompt Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleCopyPrompt("th")}
+            className="shrink-0 text-xs"
+            leftIcon={
+              copiedLang === "th" ? (
+                <Check className="w-3.5 h-3.5 text-success" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-primary-accent" />
+              )
+            }
+          >
+            {copiedLang === "th" ? "คัดลอกแล้ว!" : "Copy Prompt (ภาษาไทย: ก ข ค ง)"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => handleCopyPrompt("en")}
+            className="shrink-0 text-xs text-gray-400 hover:text-white"
+            leftIcon={
+              copiedLang === "en" ? (
+                <Check className="w-3.5 h-3.5 text-success" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-gray-400" />
+              )
+            }
+          >
+            {copiedLang === "en" ? "Copied EN!" : "Prompt (EN)"}
+          </Button>
+        </div>
       </div>
 
       {/* Section 1: Basic Information */}
@@ -294,7 +336,7 @@ export default function CreateMockPage() {
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Mock Title *"
-            placeholder="e.g. Organic Chemistry Final Drill"
+            placeholder="e.g. ตะลุยโจทย์สังคมศึกษา ม.ปลาย"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             leftIcon={<FileText className="w-4 h-4" />}
@@ -303,7 +345,7 @@ export default function CreateMockPage() {
           />
           <Input
             label="Subject (Optional)"
-            placeholder="e.g. Chemistry 201"
+            placeholder="e.g. วิชาสามัญ สังคม"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             leftIcon={<BookOpen className="w-4 h-4" />}
@@ -315,27 +357,47 @@ export default function CreateMockPage() {
       {/* Section 2: Paste Raw Questions */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <CardTitle className="text-base sm:text-lg">2. Paste AI Questions</CardTitle>
               <CardDescription>
-                Paste questions following the AI template (Questions numbered 1-N, choices A-D, Answer, Explanation).
+                รองรับทั้งตัวเลือกภาษาไทย (ก, ข, ค, ง) และภาษาอังกฤษ (A, B, C, D)
               </CardDescription>
             </div>
-            <button
-              type="button"
-              onClick={handleInsertSample}
-              className="text-xs text-primary-accent hover:underline focus:outline-none"
-            >
-              Insert Sample
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">Insert Sample:</span>
+              <button
+                type="button"
+                onClick={() => handleInsertSample("th")}
+                className="text-xs text-primary-accent hover:underline focus:outline-none font-medium"
+              >
+                ภาษาไทย (ก-ง)
+              </button>
+              <span className="text-gray-600 text-xs">•</span>
+              <button
+                type="button"
+                onClick={() => handleInsertSample("en")}
+                className="text-xs text-gray-400 hover:text-white hover:underline focus:outline-none"
+              >
+                English (A-D)
+              </button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <textarea
             rows={8}
             className="w-full bg-[#0F1117] text-gray-100 placeholder-gray-500 rounded-lg border border-card-border p-3.5 text-xs sm:text-sm font-mono leading-relaxed outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-            placeholder={`1. ______ is your best friend?
+            placeholder={`1. ใครเป็นนายกรัฐมนตรีคนแรกของประเทศไทย?
+   ก. พระยามโนปกรณ์นิติธาดา
+   ข. พันเอก พระยาพหลพลพยุหเสนา
+   ค. จอมพล ป. พิบูลสงคราม
+   ง. นายปรีดี พนมยงค์
+   เฉลย: ก
+   คำอธิบาย: พระยามโนปกรณ์นิติธาดา ดำรงตำแหน่งนายกรัฐมนตรีคนแรก พ.ศ. 2475
+
+หรือภาษาอังกฤษ:
+1. ______ is your best friend?
    A. Who
    B. Whom
    C. Whose
@@ -482,7 +544,9 @@ export default function CreateMockPage() {
                         <span className="text-[11px] text-gray-500">
                           Current Correct Answer:{" "}
                           <strong className="text-primary-accent font-bold">
-                            {q.correctAnswer || "None"}
+                            {q.correctAnswer
+                              ? `${q.correctAnswer} (${THAI_CHOICE_MAP[q.correctAnswer as ChoiceLetter] || ""})`
+                              : "None"}
                           </strong>
                         </span>
                       </label>
@@ -496,6 +560,7 @@ export default function CreateMockPage() {
                             | "choiceC"
                             | "choiceD";
                           const val = q[fieldName];
+                          const thaiLetter = THAI_CHOICE_MAP[letter];
 
                           return (
                             <div
@@ -511,14 +576,15 @@ export default function CreateMockPage() {
                                 onClick={() =>
                                   handleUpdateDraft(q.tempId, { correctAnswer: letter })
                                 }
-                                title={`Set ${letter} as correct answer`}
-                                className={`px-3 py-2 text-xs font-bold rounded-l-lg border-r transition-colors flex items-center gap-1 ${
+                                title={`Set ${letter} (${thaiLetter}) as correct answer`}
+                                className={`px-2.5 py-2 text-xs font-bold rounded-l-lg border-r transition-colors flex items-center gap-1 ${
                                   isCorrect
                                     ? "bg-success text-black border-success"
                                     : "bg-card-border/40 text-gray-400 hover:text-white hover:bg-card-border/70 border-card-border"
                                 }`}
                               >
-                                {letter}
+                                <span>{letter}</span>
+                                <span className="text-[10px] opacity-75">({thaiLetter})</span>
                                 {isCorrect && <Check className="w-3 h-3 stroke-[3]" />}
                               </button>
                               <input
@@ -527,7 +593,7 @@ export default function CreateMockPage() {
                                 onChange={(e) =>
                                   handleUpdateDraft(q.tempId, { [fieldName]: e.target.value })
                                 }
-                                placeholder={`Choice ${letter}...`}
+                                placeholder={`Choice ${letter} / ตัวเลือก ${thaiLetter}...`}
                                 className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm text-gray-200 placeholder-gray-600 outline-none"
                               />
                             </div>

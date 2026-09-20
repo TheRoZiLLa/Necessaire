@@ -40,6 +40,7 @@ import {
 import { calculateRoomSummary, startReviewMode, exitReviewMode } from "@/lib/summary";
 import { useRoomRealtime, broadcastRoomEvent, RoomEvent } from "@/lib/realtime";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { formatChoiceLetter } from "@/lib/parser";
 import {
   Room,
   Player,
@@ -105,6 +106,20 @@ export default function RoomLobbyPage({
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [isStartingReview, setIsStartingReview] = useState(false);
   const [isExitingReview, setIsExitingReview] = useState(false);
+
+  // Choice label language toggle (A-D vs ก-ง)
+  const [useThaiChoices, setUseThaiChoices] = useState(false);
+
+  useEffect(() => {
+    if (mock?.questions && mock.questions.length > 0) {
+      const hasThai = mock.questions.some(
+        (q) => /[\u0E00-\u0E7F]/.test(q.questionText) || /[\u0E00-\u0E7F]/.test(q.choiceA)
+      );
+      if (hasThai) {
+        setUseThaiChoices(true);
+      }
+    }
+  }, [mock]);
 
   // Fetch room details
   const loadRoom = useCallback(async () => {
@@ -1087,6 +1102,17 @@ export default function RoomLobbyPage({
           <span className="text-xs text-gray-400">
             • Room <strong className="font-mono text-gray-200">{roomCode}</strong>
           </span>
+
+          {/* Toggle Thai / English Choices */}
+          <button
+            type="button"
+            onClick={() => setUseThaiChoices(!useThaiChoices)}
+            className="text-[11px] px-2 py-0.5 rounded border border-card-border bg-card/60 text-gray-300 hover:text-white hover:border-primary/50 transition-colors flex items-center gap-1 font-mono"
+            title="สลับการแสดงผลตัวเลือก A-B-C-D และ ก-ข-ค-ง"
+          >
+            <span>ตัวเลือก:</span>
+            <span className="font-bold text-primary-accent">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</span>
+          </button>
         </div>
 
         {/* Phase Pill */}
@@ -1154,7 +1180,7 @@ export default function RoomLobbyPage({
                             : "bg-card-border/60 text-gray-400"
                         }`}
                       >
-                        {c.letter}
+                        {formatChoiceLetter(c.letter, useThaiChoices)}
                       </span>
                       <span className="text-sm sm:text-base pt-1 leading-snug">{c.text}</span>
                     </button>
@@ -1259,7 +1285,7 @@ export default function RoomLobbyPage({
               <div className="p-4 rounded-xl bg-card-border/20 border border-card-border flex items-center justify-between">
                 <span className="text-xs text-gray-400">Your initial answer was:</span>
                 <span className="px-3 py-1 rounded-lg bg-primary/20 text-primary-accent font-bold font-mono text-sm border border-primary/30">
-                  Option {selectedInitialChoice || "N/A"}
+                  Option {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : "N/A"}
                 </span>
               </div>
 
@@ -1279,7 +1305,7 @@ export default function RoomLobbyPage({
                           : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-500"
                       }`}
                     >
-                      Keep Option {selectedInitialChoice || "A"}
+                      Keep Option {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : (useThaiChoices ? "ก" : "A")}
                     </button>
 
                     <button
@@ -1316,7 +1342,7 @@ export default function RoomLobbyPage({
                                   : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-600"
                               }`}
                             >
-                              <span className="font-bold text-primary-accent">{c.letter}.</span>
+                              <span className="font-bold text-primary-accent">{formatChoiceLetter(c.letter, useThaiChoices)}.</span>
                               <span className="truncate">{c.text}</span>
                             </button>
                           );
@@ -1393,7 +1419,7 @@ export default function RoomLobbyPage({
                   </span>
                 </div>
                 <div className="text-2xl font-black text-white font-mono">
-                  Option {revealData.correctAnswer}
+                  Option {formatChoiceLetter(revealData.correctAnswer, useThaiChoices)}
                 </div>
               </div>
 
@@ -1428,9 +1454,9 @@ export default function RoomLobbyPage({
                         {r.nickname}
                       </span>
                       <div className="flex items-center gap-2 font-mono font-semibold">
-                        <span>{r.initialAnswer || "-"}</span>
+                        <span>{r.initialAnswer ? formatChoiceLetter(r.initialAnswer, useThaiChoices) : "-"}</span>
                         <ArrowRight className="w-3.5 h-3.5 text-gray-500" />
-                        <span>{r.finalAnswer || "-"}</span>
+                        <span>{r.finalAnswer ? formatChoiceLetter(r.finalAnswer, useThaiChoices) : "-"}</span>
                         {r.isCorrect ? (
                           <CheckCircle2 className="w-4 h-4 text-success" />
                         ) : (

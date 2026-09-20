@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { getMockById } from "@/lib/storage";
 import { createRoom } from "@/lib/room";
+import { formatChoiceLetter } from "@/lib/parser";
 import { MockWithQuestions, ChoiceLetter } from "@/types";
 
 export default function MockDetailPage({
@@ -39,6 +40,7 @@ export default function MockDetailPage({
   const [mock, setMock] = useState<MockWithQuestions | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAnswers, setShowAnswers] = useState(true);
+  const [useThaiChoices, setUseThaiChoices] = useState(false);
 
   // Create Room Modal states
   const [isHostModalOpen, setIsHostModalOpen] = useState(false);
@@ -52,6 +54,14 @@ export default function MockDetailPage({
       try {
         const data = await getMockById(mockId);
         setMock(data);
+        if (data?.questions) {
+          const hasThai = data.questions.some(
+            (q) => /[\u0E00-\u0E7F]/.test(q.questionText) || /[\u0E00-\u0E7F]/.test(q.choiceA)
+          );
+          if (hasThai) {
+            setUseThaiChoices(true);
+          }
+        }
       } catch (err) {
         console.error("Failed to load mock", err);
       } finally {
@@ -179,6 +189,17 @@ export default function MockDetailPage({
             {showAnswers ? "Hide Answers" : "Show Answers"}
           </Button>
 
+          {/* Toggle Thai / English Choices */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setUseThaiChoices(!useThaiChoices)}
+            className="text-xs font-mono"
+            title="สลับการแสดงผลตัวเลือก A-D และ ก-ง"
+          >
+            ตัวเลือก: <strong className="text-primary-accent ml-1">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</strong>
+          </Button>
+
           <Link href="/create">
             <Button
               variant="secondary"
@@ -225,7 +246,7 @@ export default function MockDetailPage({
                 </div>
                 {showAnswers && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-success/15 text-success border border-success/30">
-                    Answer: {q.correctAnswer}
+                    Answer: {formatChoiceLetter(q.correctAnswer, useThaiChoices)}
                   </span>
                 )}
               </CardHeader>
@@ -257,7 +278,7 @@ export default function MockDetailPage({
                               : "bg-card-border/50 text-gray-400"
                           }`}
                         >
-                          {c.key}
+                          {formatChoiceLetter(c.key, useThaiChoices)}
                         </span>
                         <span className="leading-snug pt-0.5">{c.text}</span>
                       </div>
