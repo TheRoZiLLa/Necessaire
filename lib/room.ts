@@ -173,9 +173,17 @@ export async function createRoom(
 
 /**
  * Fetch Room details along with its Mock questions and current Players list.
+ * Sanitizes correct_answer and explanation for non-host players before REVEAL phase.
  */
-export async function getRoomDetails(roomCode: string): Promise<RoomDetails | null> {
+export async function getRoomDetails(
+  roomCode: string,
+  requestingPlayerId?: string
+): Promise<RoomDetails | null> {
   const normalizedCode = roomCode.trim().toUpperCase();
+
+  let room: Room | null = null;
+  let players: Player[] = [];
+  let mock: any = null;
 
   if (isSupabaseConfigured()) {
     try {
@@ -194,29 +202,26 @@ export async function getRoomDetails(roomCode: string): Promise<RoomDetails | nu
             .eq("room_id", roomData.id)
             .order("joined_at", { ascending: true });
 
-          const mock = await getMockById(roomData.mock_id);
-          if (mock) {
-            const players: Player[] = (playersData || []).map((p) => ({
-              id: p.id,
-              roomId: p.room_id,
-              nickname: p.nickname,
-              isHost: p.is_host,
-              joinedAt: p.joined_at,
-              lastSeen: p.last_seen,
-            }));
+          players = (playersData || []).map((p) => ({
+            id: p.id,
+            roomId: p.room_id,
+            nickname: p.nickname,
+            isHost: p.is_host,
+            joinedAt: p.joined_at,
+            lastSeen: p.last_seen,
+          }));
 
-            const room: Room = {
-              id: roomData.id,
-              roomCode: roomData.room_code,
-              mockId: roomData.mock_id,
-              hostId: roomData.host_id,
-              currentQuestion: roomData.current_question,
-              status: roomData.status as RoomStatus,
-              createdAt: roomData.created_at,
-            };
+          room = {
+            id: roomData.id,
+            roomCode: roomData.room_code,
+            mockId: roomData.mock_id,
+            hostId: roomData.host_id,
+            currentQuestion: roomData.current_question,
+            status: roomData.status as RoomStatus,
+            createdAt: roomData.created_at,
+          };
 
-            return { room, mock, players };
-          }
+          mock = await getMockById(roomData.mock_id);
         }
       }
     } catch (err) {
@@ -225,19 +230,41 @@ export async function getRoomDetails(roomCode: string): Promise<RoomDetails | nu
   }
 
   // Local fallback
-  const localRooms = getLocalRooms();
-  const room = localRooms.find((r) => r.roomCode === normalizedCode);
-  if (!room) return null;
+  if (!room || !mock) {
+    const localRooms = getLocalRooms();
+    const foundRoom = localRooms.find((r) => r.roomCode === normalizedCode);
+    if (!foundRoom) return null;
 
-  const mock = await getMockById(room.mockId);
-  if (!mock) return null;
+    room = foundRoom;
+    mock = await getMockById(foundRoom.mockId);
+    if (!mock) return null;
 
-  const localPlayers = getLocalPlayers().filter((p) => p.roomId === room.id);
+    players = getLocalPlayers().filter((p) => p.roomId === foundRoom.id);
+  }
+
+  if (!room || !mock) return null;
+
+  // Security: Check if requesting player is Host or if phase is REVEAL / FINISHED
+  const requestingPlayer = requestingPlayerId ? players.find((p) => p.id === requestingPlayerId) : null;
+  const isHost = requestingPlayer ? requestingPlayer.isHost : false;
+  const isRevealedOrFinished = room.status === "REVEAL" || room.status === "FINISHED";
+
+  // Sanitize questions if non-host and not revealed
+  if (!isHost && !isRevealedOrFinished) {
+    mock = {
+      ...mock,
+      questions: mock.questions.map((q: any) => ({
+        ...q,
+        correctAnswer: "",
+        explanation: undefined,
+      })),
+    };
+  }
 
   return {
     room,
     mock,
-    players: localPlayers,
+    players,
   };
 }
 

@@ -49,17 +49,35 @@ CREATE TABLE IF NOT EXISTS players (
   CONSTRAINT unique_room_nickname UNIQUE(room_id, nickname)
 );
 
+-- 5. Answers Table
+CREATE TABLE IF NOT EXISTS answers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  initial_answer VARCHAR(1) CHECK (initial_answer IN ('A', 'B', 'C', 'D')),
+  final_answer VARCHAR(1) CHECK (final_answer IN ('A', 'B', 'C', 'D')),
+  locked BOOLEAN DEFAULT false NOT NULL,
+  final_locked BOOLEAN DEFAULT false NOT NULL,
+  is_ready BOOLEAN DEFAULT false NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  CONSTRAINT unique_room_question_player UNIQUE(room_id, question_id, player_id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_questions_mock_id ON questions(mock_id);
 CREATE INDEX IF NOT EXISTS idx_questions_number ON questions(mock_id, question_number);
 CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(room_code);
 CREATE INDEX IF NOT EXISTS idx_players_room_id ON players(room_id);
+CREATE INDEX IF NOT EXISTS idx_answers_room_q ON answers(room_id, question_id);
+CREATE INDEX IF NOT EXISTS idx_answers_player ON answers(player_id);
 
 -- Row Level Security (RLS)
 ALTER TABLE mocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE answers ENABLE ROW LEVEL SECURITY;
 
 -- Allow public read & write for MVP (No authentication requirement)
 CREATE POLICY "Allow public read on mocks" ON mocks FOR SELECT TO anon, authenticated USING (true);
@@ -70,6 +88,7 @@ CREATE POLICY "Allow public insert on questions" ON questions FOR INSERT TO anon
 
 CREATE POLICY "Allow public all on rooms" ON rooms FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public all on players" ON players FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all on answers" ON answers FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
--- Enable Supabase Realtime for rooms & players
-ALTER PUBLICATION supabase_realtime ADD TABLE rooms, players;
+-- Enable Supabase Realtime for rooms, players, and answers
+ALTER PUBLICATION supabase_realtime ADD TABLE rooms, players, answers;

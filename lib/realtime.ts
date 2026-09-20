@@ -2,14 +2,18 @@
 
 import { useEffect, useRef } from "react";
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase";
-import { Player, RoomStatus } from "@/types";
+import { Player, RevealData, RoomStatus } from "@/types";
 
 export type RoomEvent =
   | { type: "PLAYER_JOINED"; player: Player }
   | { type: "PLAYER_LEFT"; playerId: string }
   | { type: "ROOM_STARTED"; currentQuestion: number; status: RoomStatus }
-  | { type: "ROOM_SYNC_REQUEST" }
-  | { type: "ROOM_SYNC_RESPONSE"; players: Player[]; status: RoomStatus; currentQuestion: number };
+  | { type: "ANSWER_PROGRESS"; answeredCount: number; totalPlayers: number }
+  | { type: "STATUS_CHANGED"; status: RoomStatus; currentQuestion?: number }
+  | { type: "READY_PROGRESS"; readyCount: number; totalPlayers: number }
+  | { type: "FINAL_LOCK_PROGRESS"; finalLockedCount: number; totalPlayers: number }
+  | { type: "ANSWER_REVEALED"; revealData: RevealData }
+  | { type: "NEXT_QUESTION"; currentQuestion: number; status: RoomStatus };
 
 /**
  * Broadcast an event to all clients in the same room via Supabase Realtime and Browser BroadcastChannel.

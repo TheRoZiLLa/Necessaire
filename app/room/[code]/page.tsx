@@ -10,19 +10,41 @@ import {
   Crown,
   Play,
   Share2,
-  Sparkles,
   ArrowLeft,
   Loader2,
   LogOut,
   HelpCircle,
   BookOpen,
+  Disc as DiscordIcon,
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
+  Sparkles,
+  Lock,
+  RefreshCw,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
 import { getRoomDetails, startRoom, leaveRoom } from "@/lib/room";
+import {
+  submitInitialAnswer,
+  setPlayerReady,
+  transitionToChangePhase,
+  submitFinalAnswer,
+  revealAnswer,
+  advanceToNextQuestion,
+} from "@/lib/loop";
 import { useRoomRealtime, broadcastRoomEvent, RoomEvent } from "@/lib/realtime";
-import { Room, Player, MockWithQuestions, ChoiceLetter } from "@/types";
+import {
+  Room,
+  Player,
+  MockWithQuestions,
+  ChoiceLetter,
+  RevealData,
+  RoomStatus,
+} from "@/types";
 
 export default function RoomLobbyPage({
   params,
@@ -46,14 +68,38 @@ export default function RoomLobbyPage({
   const [isCopiedLink, setIsCopiedLink] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
-  // Active question answering state (for phase transition to Question 1)
-  const [selectedChoice, setSelectedChoice] = useState<ChoiceLetter | null>(null);
-  const [isLocked, setIsLocked] = useState(false);
+  // -------------------------------------------------------------
+  // Test Loop States
+  // -------------------------------------------------------------
+  // Answer Phase
+  const [selectedInitialChoice, setSelectedInitialChoice] = useState<ChoiceLetter | null>(null);
+  const [isInitialLocked, setIsInitialLocked] = useState(false);
+  const [answeredCount, setAnsweredCount] = useState(0);
+
+  // Discussion Phase
+  const [isReady, setIsReady] = useState(false);
+  const [readyCount, setReadyCount] = useState(0);
+
+  // Change Phase
+  const [changeMode, setChangeMode] = useState<"keep" | "change" | null>(null);
+  const [selectedFinalChoice, setSelectedFinalChoice] = useState<ChoiceLetter | null>(null);
+  const [isFinalLocked, setIsFinalLocked] = useState(false);
+  const [finalLockedCount, setFinalLockedCount] = useState(0);
+
+  // Reveal Phase
+  const [revealData, setRevealData] = useState<RevealData | null>(null);
+  const [isRevealing, setIsRevealing] = useState(false);
+  const [isAdvancing, setIsAdvancing] = useState(false);
 
   // Fetch initial room details
   const loadRoom = useCallback(async () => {
     try {
-      const details = await getRoomDetails(roomCode);
+      const storedPlayerId =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem(`necessaire_player_${roomCode}`)
+          : null;
+
+      const details = await getRoomDetails(roomCode, storedPlayerId || undefined);
       if (!details) {
         setRoom(null);
         setLoading(false);
@@ -64,22 +110,16 @@ export default function RoomLobbyPage({
       setMock(details.mock);
       setPlayers(details.players);
 
-      // Check current player session
-      if (typeof window !== "undefined") {
-        const storedPlayerId = sessionStorage.getItem(`necessaire_player_${roomCode}`);
-        if (storedPlayerId) {
-          setCurrentPlayerId(storedPlayerId);
-          const current = details.players.find((p) => p.id === storedPlayerId);
-          if (current) {
-            setIsHost(current.isHost);
-          }
-        } else {
-          // Unidentified user navigated directly to /room/CODE
-          // If in lobby, redirect to /join?code=CODE
-          if (details.room.status === "LOBBY") {
-            router.push(`/join?code=${roomCode}`);
-            return;
-          }
+      if (storedPlayerId) {
+        setCurrentPlayerId(storedPlayerId);
+        const current = details.players.find((p) => p.id === storedPlayerId);
+        if (current) {
+          setIsHost(current.isHost);
+        }
+      } else {
+        if (details.room.status === "LOBBY") {
+          router.push(`/join?code=${roomCode}`);
+          return;
         }
       }
     } catch (err) {
@@ -93,6 +133,20 @@ export default function RoomLobbyPage({
     loadRoom();
   }, [loadRoom]);
 
+  // Reset local form states for a new question
+  const resetQuestionStates = useCallback(() => {
+    setSelectedInitialChoice(null);
+    setIsInitialLocked(false);
+    setAnsweredCount(0);
+    setIsReady(false);
+    setReadyCount(0);
+    setChangeMode(null);
+    setSelectedFinalChoice(null);
+    setIsFinalLocked(false);
+    setFinalLockedCount(0);
+    setRevealData(null);
+  }, []);
+
   // Handle Realtime events
   const handleRealtimeEvent = useCallback(
     (event: RoomEvent) => {
@@ -103,7 +157,7 @@ export default function RoomLobbyPage({
             if (exists) return prev;
             return [...prev, event.player];
           });
-          info(`${event.player.nickname} joined the lobby!`);
+          info(`${event.player.nickname} joined the room!`);
           break;
 
         case "PLAYER_LEFT":
@@ -120,34 +174,87 @@ export default function RoomLobbyPage({
                 }
               : null
           );
+          resetQuestionStates();
           success("The host has started the mock test! Question 1 is live.", "Test Started");
+          break;
+
+        case "ANSWER_PROGRESS":
+          setAnsweredCount(event.answeredCount);
+          break;
+
+        case "STATUS_CHANGED":
+          setRoom((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: event.status,
+                  currentQuestion: event.currentQuestion ?? prev.currentQuestion,
+                }
+              : null
+          );
+          if (event.status === "DISCUSSION") {
+            info("Everyone has answered! Discuss your answers in Discord.", "Discussion Time");
+          } else if (event.status === "CHANGING") {
+            info("Discussion ended. You may now keep or revise your answer.", "Change Phase");
+          }
+          break;
+
+        case "READY_PROGRESS":
+          setReadyCount(event.readyCount);
+          break;
+
+        case "FINAL_LOCK_PROGRESS":
+          setFinalLockedCount(event.finalLockedCount);
+          break;
+
+        case "ANSWER_REVEALED":
+          setRevealData(event.revealData);
+          setRoom((prev) => (prev ? { ...prev, status: "REVEAL" } : null));
+          success("Host has revealed the correct answer!", "Reveal Phase");
+          break;
+
+        case "NEXT_QUESTION":
+          setRoom((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: event.status,
+                  currentQuestion: event.currentQuestion,
+                }
+              : null
+          );
+          resetQuestionStates();
+          if (event.status === "FINISHED") {
+            success("Mock test completed! Well done.", "Finished");
+          } else {
+            info(`Moving to Question ${event.currentQuestion}.`, "Next Question");
+          }
           break;
       }
     },
-    [info, success]
+    [info, success, resetQuestionStates]
   );
 
   useRoomRealtime(roomCode, handleRealtimeEvent);
 
-  // Copy Room Code
+  // Copy helpers
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(roomCode);
       setIsCopiedCode(true);
-      success(`Room code ${roomCode} copied to clipboard!`, "Copied");
+      success(`Room code ${roomCode} copied!`, "Copied");
       setTimeout(() => setIsCopiedCode(false), 2000);
     } catch {
       error("Failed to copy room code.");
     }
   };
 
-  // Copy Invite Link
   const handleCopyLink = async () => {
     try {
       const inviteUrl = `${window.location.origin}/join?code=${roomCode}`;
       await navigator.clipboard.writeText(inviteUrl);
       setIsCopiedLink(true);
-      success("Invite link copied to clipboard! Send it to your friends.", "Link Copied");
+      success("Invite link copied!", "Link Copied");
       setTimeout(() => setIsCopiedLink(false), 2000);
     } catch {
       error("Failed to copy invite link.");
@@ -157,27 +264,19 @@ export default function RoomLobbyPage({
   // Host starts the Mock Test
   const handleStartMock = async () => {
     if (!isHost) return;
-
     setIsStarting(true);
     try {
       const res = await startRoom(roomCode);
       if (res.success) {
-        // Broadcast to all connected clients
         await broadcastRoomEvent(roomCode, {
           type: "ROOM_STARTED",
           currentQuestion: 1,
           status: "ANSWERING",
         });
-
         setRoom((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: "ANSWERING",
-                currentQuestion: 1,
-              }
-            : null
+          prev ? { ...prev, status: "ANSWERING", currentQuestion: 1 } : null
         );
+        resetQuestionStates();
         success("Mock test started! Displaying Question 1 to all players.", "Started");
       } else {
         error(res.error || "Failed to start room.");
@@ -202,11 +301,198 @@ export default function RoomLobbyPage({
     router.push("/join");
   };
 
+  // -------------------------------------------------------------
+  // 1. Submit Initial Answer (ANSWERING phase)
+  // -------------------------------------------------------------
+  const currentQIndex = (room?.currentQuestion || 1) - 1;
+  const currentQuestion = mock?.questions[currentQIndex] || mock?.questions[0];
+
+  const handleLockInitialAnswer = async () => {
+    if (!selectedInitialChoice || !currentQuestion || !currentPlayerId) return;
+
+    setIsInitialLocked(true);
+    try {
+      const res = await submitInitialAnswer(
+        roomCode,
+        currentPlayerId,
+        currentQuestion.id,
+        selectedInitialChoice
+      );
+
+      if (res.success) {
+        setAnsweredCount(res.answeredCount);
+
+        // Broadcast progress (never broadcasts the chosen option letter)
+        await broadcastRoomEvent(roomCode, {
+          type: "ANSWER_PROGRESS",
+          answeredCount: res.answeredCount,
+          totalPlayers: res.totalPlayers,
+        });
+
+        // If everyone answered, transition to DISCUSSION
+        if (res.allAnswered) {
+          await broadcastRoomEvent(roomCode, {
+            type: "STATUS_CHANGED",
+            status: "DISCUSSION",
+          });
+          setRoom((prev) => (prev ? { ...prev, status: "DISCUSSION" } : null));
+          info("Everyone has answered! Discuss your answers in Discord.", "Discussion Time");
+        }
+      }
+    } catch (err: any) {
+      error(err.message || "Failed to lock answer.");
+      setIsInitialLocked(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 2. Ready in Discussion Phase (DISCUSSION phase)
+  // -------------------------------------------------------------
+  const handleToggleReady = async () => {
+    if (!currentQuestion || !currentPlayerId) return;
+    const nextReady = !isReady;
+    setIsReady(nextReady);
+
+    try {
+      const res = await setPlayerReady(
+        roomCode,
+        currentPlayerId,
+        currentQuestion.id,
+        nextReady
+      );
+
+      if (res.success) {
+        setReadyCount(res.readyCount);
+        await broadcastRoomEvent(roomCode, {
+          type: "READY_PROGRESS",
+          readyCount: res.readyCount,
+          totalPlayers: res.totalPlayers,
+        });
+      }
+    } catch (err: any) {
+      error(err.message || "Failed to update ready state.");
+    }
+  };
+
+  const handleProceedToChange = async () => {
+    if (!isHost) return;
+    try {
+      await transitionToChangePhase(roomCode);
+      await broadcastRoomEvent(roomCode, {
+        type: "STATUS_CHANGED",
+        status: "CHANGING",
+      });
+      setRoom((prev) => (prev ? { ...prev, status: "CHANGING" } : null));
+    } catch (err: any) {
+      error(err.message || "Failed to proceed to Change phase.");
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 3. Final Lock (CHANGING phase)
+  // -------------------------------------------------------------
+  const handleFinalLock = async () => {
+    if (!currentQuestion || !currentPlayerId) return;
+
+    // Determine final choice: either changed choice or keep initial choice
+    const finalChoice =
+      changeMode === "change" && selectedFinalChoice
+        ? selectedFinalChoice
+        : selectedInitialChoice;
+
+    if (!finalChoice) {
+      error("Please pick an answer before locking.");
+      return;
+    }
+
+    setIsFinalLocked(true);
+    try {
+      const res = await submitFinalAnswer(
+        roomCode,
+        currentPlayerId,
+        currentQuestion.id,
+        finalChoice
+      );
+
+      if (res.success) {
+        setFinalLockedCount(res.finalLockedCount);
+        await broadcastRoomEvent(roomCode, {
+          type: "FINAL_LOCK_PROGRESS",
+          finalLockedCount: res.finalLockedCount,
+          totalPlayers: res.totalPlayers,
+        });
+
+        success("Final answer locked! Waiting for host to reveal.", "Locked");
+      }
+    } catch (err: any) {
+      error(err.message || "Failed to final lock answer.");
+      setIsFinalLocked(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 4. Reveal Answer (REVEAL phase)
+  // -------------------------------------------------------------
+  const handleRevealAnswer = async () => {
+    if (!isHost || !currentQuestion) return;
+
+    setIsRevealing(true);
+    try {
+      const res = await revealAnswer(roomCode, currentQuestion.id);
+      if (res.success && res.revealData) {
+        setRevealData(res.revealData);
+        setRoom((prev) => (prev ? { ...prev, status: "REVEAL" } : null));
+
+        await broadcastRoomEvent(roomCode, {
+          type: "ANSWER_REVEALED",
+          revealData: res.revealData,
+        });
+      } else {
+        error(res.error || "Failed to reveal answer.");
+      }
+    } catch (err: any) {
+      error(err.message || "Failed to reveal answer.");
+    } finally {
+      setIsRevealing(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 5. Next Question (NEXT phase)
+  // -------------------------------------------------------------
+  const handleNextQuestion = async () => {
+    if (!isHost) return;
+
+    setIsAdvancing(true);
+    try {
+      const res = await advanceToNextQuestion(roomCode);
+      if (res.success) {
+        const nextStatus: RoomStatus = res.isFinished ? "FINISHED" : "ANSWERING";
+        const nextNum = res.nextQuestionNumber;
+
+        await broadcastRoomEvent(roomCode, {
+          type: "NEXT_QUESTION",
+          currentQuestion: nextNum,
+          status: nextStatus,
+        });
+
+        setRoom((prev) =>
+          prev ? { ...prev, currentQuestion: nextNum, status: nextStatus } : null
+        );
+        resetQuestionStates();
+      }
+    } catch (err: any) {
+      error(err.message || "Failed to advance question.");
+    } finally {
+      setIsAdvancing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col justify-center items-center py-24 space-y-4">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        <p className="text-xs text-gray-400">Loading lobby {roomCode}...</p>
+        <p className="text-xs text-gray-400">Loading room {roomCode}...</p>
       </div>
     );
   }
@@ -238,7 +524,6 @@ export default function RoomLobbyPage({
   if (room.status === "LOBBY") {
     return (
       <div className="flex-1 max-w-3xl mx-auto w-full px-4 py-8 sm:py-14 space-y-8">
-        {/* Top Header info */}
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -257,7 +542,7 @@ export default function RoomLobbyPage({
           </div>
         </div>
 
-        {/* Room Code Showcase Card */}
+        {/* Room Code Card */}
         <Card className="border-primary/40 shadow-glow overflow-visible relative">
           <div className="p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
             <div className="space-y-1">
@@ -269,7 +554,6 @@ export default function RoomLobbyPage({
               </div>
             </div>
 
-            {/* Mock details subtitle */}
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-gray-300">
               <span className="font-semibold text-white">{mock.title}</span>
               {mock.subject && (
@@ -281,7 +565,6 @@ export default function RoomLobbyPage({
               <span className="text-gray-500">• {mock.questions.length} questions</span>
             </div>
 
-            {/* Quick Share Buttons */}
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2 w-full sm:w-auto">
               <Button
                 variant="outline"
@@ -325,7 +608,7 @@ export default function RoomLobbyPage({
               </CardTitle>
             </div>
             <span className="text-xs text-gray-400">
-              Waiting in Discord...
+              Hop on Discord while waiting
             </span>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
@@ -409,11 +692,49 @@ export default function RoomLobbyPage({
   }
 
   // ==========================================
-  // VIEW 2: ACTIVE MOCK TEST (status === "ANSWERING")
+  // VIEW 6: FINISHED VIEW (status === "FINISHED")
   // ==========================================
-  const currentQIndex = (room.currentQuestion || 1) - 1;
-  const currentQuestion = mock.questions[currentQIndex] || mock.questions[0];
+  if (room.status === "FINISHED") {
+    return (
+      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-16 text-center space-y-6">
+        <Card className="p-8 sm:p-12 space-y-6 border-primary/40 shadow-glow">
+          <div className="w-16 h-16 rounded-2xl bg-primary/20 text-primary-accent flex items-center justify-center mx-auto border border-primary/40">
+            <Sparkles className="w-8 h-8" />
+          </div>
 
+          <div className="space-y-2">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Mock Test Complete!
+            </h1>
+            <p className="text-sm text-gray-300 max-w-md mx-auto">
+              You and your study group have finished all {mock.questions.length} questions in{" "}
+              <strong className="text-white">{mock.title}</strong>.
+            </p>
+          </div>
+
+          <div className="pt-4 flex flex-wrap justify-center gap-3">
+            <Link href={`/mock/${mock.id}`}>
+              <Button variant="outline" size="md">
+                Review Test & Explanations
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button variant="primary" size="md">
+                Back to Home
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // ACTIVE QUESTION SHARED HEADER
+  // ==========================================
+  if (!currentQuestion) return null;
+
+  const totalQuestions = mock.questions.length;
   const choices: { letter: ChoiceLetter; text: string }[] = [
     { letter: "A", text: currentQuestion.choiceA },
     { letter: "B", text: currentQuestion.choiceB },
@@ -421,107 +742,385 @@ export default function RoomLobbyPage({
     { letter: "D", text: currentQuestion.choiceD },
   ];
 
-  const handleSelectChoice = (letter: ChoiceLetter) => {
-    if (isLocked) return;
-    setSelectedChoice(letter);
-  };
-
-  const handleToggleLock = () => {
-    if (!selectedChoice) return;
-    setIsLocked(!isLocked);
-  };
-
   return (
     <div className="flex-1 max-w-3xl mx-auto w-full px-4 py-8 sm:py-12 space-y-6">
-      {/* Top Status Bar */}
-      <div className="flex items-center justify-between border-b border-card-border/60 pb-4">
-        <div className="flex items-center gap-2">
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary-accent border border-primary/30 uppercase tracking-wider">
-            Question {currentQIndex + 1} of {mock.questions.length}
+      {/* Top Header: Question Progress & Room Status */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-card-border/60 pb-4">
+        <div className="flex items-center gap-3">
+          <span className="text-lg font-bold text-white font-mono">
+            Q {currentQIndex + 1} / {totalQuestions}
           </span>
           <span className="text-xs text-gray-400">
-            • Room {roomCode}
+            • Room <strong className="font-mono text-gray-200">{roomCode}</strong>
           </span>
         </div>
 
+        {/* Phase Pill */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 font-mono">
-            {players.length} Players connected
-          </span>
+          {room.status === "ANSWERING" && (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-primary/20 text-primary-accent border border-primary/30 uppercase tracking-wider">
+              1. Answering Phase
+            </span>
+          )}
+          {room.status === "DISCUSSION" && (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider flex items-center gap-1.5">
+              <DiscordIcon className="w-3.5 h-3.5 text-[#5865F2]" />
+              2. Discord Discussion
+            </span>
+          )}
+          {room.status === "CHANGING" && (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider flex items-center gap-1.5">
+              <RefreshCw className="w-3.5 h-3.5" />
+              3. Change or Keep
+            </span>
+          )}
+          {room.status === "REVEAL" && (
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-success/20 text-success border border-success/30 uppercase tracking-wider flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5" />
+              4. Reveal & Learn
+            </span>
+          )}
         </div>
       </div>
 
       {/* Main Question Card */}
       <Card className="border-card-border shadow-xl">
         <CardHeader className="bg-card-border/20 py-4 px-6">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
-              Step 1: Think & Lock
-            </span>
-            {isLocked ? (
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-success bg-success/15 px-2.5 py-0.5 rounded border border-success/30">
-                <Check className="w-3.5 h-3.5" />
-                Answer Locked ({selectedChoice})
-              </span>
-            ) : (
-              <span className="text-xs text-gray-400">
-                {selectedChoice ? "Click Lock Answer when ready" : "Choose your answer"}
-              </span>
-            )}
-          </div>
-          <CardTitle className="text-lg sm:text-xl text-white font-medium pt-2 leading-relaxed whitespace-pre-line">
+          <CardTitle className="text-lg sm:text-xl text-white font-medium leading-relaxed whitespace-pre-line">
             {currentQuestion.questionText}
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="p-6 space-y-3">
-          {choices.map((c) => {
-            const isSelected = selectedChoice === c.letter;
+        <CardContent className="p-6 space-y-6">
+          {/* =======================================================
+              PHASE 1: ANSWERING
+              ======================================================= */}
+          {room.status === "ANSWERING" && (
+            <div className="space-y-4">
+              <div className="space-y-2.5">
+                {choices.map((c) => {
+                  const isSelected = selectedInitialChoice === c.letter;
 
-            return (
-              <button
-                key={c.letter}
-                type="button"
-                disabled={isLocked}
-                onClick={() => handleSelectChoice(c.letter)}
-                className={`w-full text-left p-4 rounded-xl border flex items-start gap-3.5 transition-all select-none ${
-                  isSelected
-                    ? "border-primary bg-primary/15 text-white shadow-glow-sm"
-                    : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-600 hover:bg-card/50"
-                } ${isLocked ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}
-              >
-                <span
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
-                    isSelected
-                      ? "bg-primary text-white"
-                      : "bg-card-border/60 text-gray-400"
-                  }`}
-                >
-                  {c.letter}
+                  return (
+                    <button
+                      key={c.letter}
+                      type="button"
+                      disabled={isInitialLocked}
+                      onClick={() => setSelectedInitialChoice(c.letter)}
+                      className={`w-full text-left p-4 rounded-xl border flex items-start gap-3.5 transition-all select-none ${
+                        isSelected
+                          ? "border-primary bg-primary/15 text-white shadow-glow-sm"
+                          : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-600 hover:bg-card/50"
+                      } ${isInitialLocked ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
+                    >
+                      <span
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                          isSelected
+                            ? "bg-primary text-white"
+                            : "bg-card-border/60 text-gray-400"
+                        }`}
+                      >
+                        {c.letter}
+                      </span>
+                      <span className="text-sm pt-0.5 leading-snug">{c.text}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Progress & Lock Button */}
+              <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs text-gray-400 flex items-center gap-2">
+                  <span className="font-semibold text-white">
+                    {answeredCount} / {players.length}
+                  </span>
+                  <span>players answered</span>
+                  {isInitialLocked && (
+                    <span className="inline-flex items-center gap-1 text-success font-medium ml-2">
+                      <Lock className="w-3.5 h-3.5" />
+                      Answer locked
+                    </span>
+                  )}
+                </div>
+
+                {!isInitialLocked ? (
+                  <Button
+                    variant="primary"
+                    size="md"
+                    disabled={!selectedInitialChoice}
+                    onClick={handleLockInitialAnswer}
+                    className="w-full sm:w-auto"
+                    leftIcon={<Lock className="w-4 h-4" />}
+                  >
+                    Lock Answer
+                  </Button>
+                ) : (
+                  <span className="text-xs text-gray-400 italic">
+                    Waiting for everyone to lock their answers...
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* =======================================================
+              PHASE 2: DISCUSSION
+              ======================================================= */}
+          {room.status === "DISCUSSION" && (
+            <div className="space-y-6 py-2 text-center">
+              <div className="p-6 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 space-y-3">
+                <div className="w-12 h-12 rounded-full bg-[#5865F2]/20 text-[#5865F2] flex items-center justify-center mx-auto">
+                  <DiscordIcon className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white">
+                  Everyone has answered.
+                </h3>
+                <p className="text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
+                  Hop on your Discord call now to discuss why you chose your answer and debate the concepts together!
+                </p>
+              </div>
+
+              {/* Ready Button for players */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-card-border/60">
+                <div className="text-xs text-gray-400">
+                  <strong className="text-white">{readyCount}</strong> / {players.length} players ready to revise
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <Button
+                    variant={isReady ? "secondary" : "primary"}
+                    size="md"
+                    onClick={handleToggleReady}
+                    className="w-full sm:w-auto"
+                    leftIcon={isReady ? <Check className="w-4 h-4 text-success" /> : undefined}
+                  >
+                    {isReady ? "I'm Ready ✓" : "I'm Ready"}
+                  </Button>
+
+                  {/* Host Proceed Action */}
+                  {isHost && (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={handleProceedToChange}
+                      className="w-full sm:w-auto shadow-glow"
+                      rightIcon={<ArrowRight className="w-4 h-4" />}
+                    >
+                      Proceed to Change
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* =======================================================
+              PHASE 3: CHANGING (Keep or Change)
+              ======================================================= */}
+          {room.status === "CHANGING" && (
+            <div className="space-y-6">
+              <div className="p-4 rounded-xl bg-card-border/20 border border-card-border flex items-center justify-between">
+                <span className="text-xs text-gray-400">Your initial answer was:</span>
+                <span className="px-3 py-1 rounded-lg bg-primary/20 text-primary-accent font-bold font-mono text-sm border border-primary/30">
+                  Option {selectedInitialChoice || "N/A"}
                 </span>
-                <span className="text-sm pt-0.5 leading-snug">{c.text}</span>
-              </button>
-            );
-          })}
+              </div>
 
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <span className="text-xs text-gray-500">
-              {isLocked
-                ? "Locked! You can change answer after discussing in Discord."
-                : "Select an option above to lock in your answer."}
-            </span>
+              {/* Choice Mode Selection: Keep or Change */}
+              {!isFinalLocked ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setChangeMode("keep");
+                        setSelectedFinalChoice(selectedInitialChoice);
+                      }}
+                      className={`p-3.5 rounded-xl border text-sm font-semibold transition-all ${
+                        changeMode === "keep"
+                          ? "border-primary bg-primary/20 text-white shadow-glow-sm"
+                          : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-500"
+                      }`}
+                    >
+                      Keep Option {selectedInitialChoice || "A"}
+                    </button>
 
-            <Button
-              type="button"
-              variant={isLocked ? "outline" : "primary"}
-              disabled={!selectedChoice}
-              onClick={handleToggleLock}
-              size="md"
-              className="w-full sm:w-auto"
-            >
-              {isLocked ? "Unlock Answer" : "Lock Answer"}
-            </Button>
-          </div>
+                    <button
+                      type="button"
+                      onClick={() => setChangeMode("change")}
+                      className={`p-3.5 rounded-xl border text-sm font-semibold transition-all ${
+                        changeMode === "change"
+                          ? "border-primary bg-primary/20 text-white shadow-glow-sm"
+                          : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-500"
+                      }`}
+                    >
+                      Change Answer
+                    </button>
+                  </div>
+
+                  {/* If user clicked Change: show choice list */}
+                  {changeMode === "change" && (
+                    <div className="space-y-2 pt-2 animate-in fade-in duration-200">
+                      <span className="text-xs text-gray-400 font-medium block">
+                        Select your revised answer:
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {choices.map((c) => {
+                          const isSelected = selectedFinalChoice === c.letter;
+
+                          return (
+                            <button
+                              key={c.letter}
+                              type="button"
+                              onClick={() => setSelectedFinalChoice(c.letter)}
+                              className={`p-3 rounded-lg border text-left text-xs sm:text-sm flex items-start gap-2.5 transition-all ${
+                                isSelected
+                                  ? "border-primary bg-primary/20 text-white"
+                                  : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-600"
+                              }`}
+                            >
+                              <span className="font-bold text-primary-accent">{c.letter}.</span>
+                              <span className="truncate">{c.text}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Final Lock action */}
+                  <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-xs text-gray-400">
+                      {finalLockedCount} / {players.length} players final locked
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="md"
+                      disabled={!changeMode || (changeMode === "change" && !selectedFinalChoice)}
+                      onClick={handleFinalLock}
+                      className="w-full sm:w-auto"
+                      leftIcon={<Lock className="w-4 h-4" />}
+                    >
+                      Final Lock
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-success/10 border border-success/30 text-center space-y-2">
+                  <div className="flex items-center justify-center gap-1.5 text-success font-semibold text-sm">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Final Answer Locked</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Waiting for host to reveal the answer ({finalLockedCount} / {players.length} locked).
+                  </p>
+                </div>
+              )}
+
+              {/* Host Reveal Action */}
+              {isHost && (
+                <div className="pt-4 border-t border-card-border/60 flex items-center justify-between">
+                  <span className="text-xs text-gray-400">
+                    Host Control: {finalLockedCount} / {players.length} players locked
+                  </span>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleRevealAnswer}
+                    isLoading={isRevealing}
+                    className="shadow-glow"
+                    leftIcon={<Eye className="w-4 h-4" />}
+                  >
+                    Reveal Answer
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* =======================================================
+              PHASE 4: REVEAL
+              ======================================================= */}
+          {room.status === "REVEAL" && revealData && (
+            <div className="space-y-6">
+              {/* Correct Answer Highlight */}
+              <div className="p-5 rounded-xl bg-success/10 border border-success/40 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-success flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Correct Answer
+                  </span>
+                  <span className="text-xs font-medium text-gray-300">
+                    {revealData.correctCount} / {revealData.totalPlayers} correct
+                  </span>
+                </div>
+                <div className="text-2xl font-black text-white font-mono">
+                  Option {revealData.correctAnswer}
+                </div>
+              </div>
+
+              {/* Explanation Card */}
+              {revealData.explanation && (
+                <div className="p-4 rounded-xl bg-card-border/20 border border-card-border space-y-1.5">
+                  <span className="text-xs font-semibold text-primary-accent uppercase tracking-wider block">
+                    Explanation
+                  </span>
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-line">
+                    {revealData.explanation}
+                  </p>
+                </div>
+              )}
+
+              {/* Trajectory Breakdown (Initial -> Final) */}
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
+                  Player Answers (Initial → Final)
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {revealData.results.map((r) => (
+                    <div
+                      key={r.playerId}
+                      className={`p-3 rounded-lg border flex items-center justify-between text-xs sm:text-sm ${
+                        r.isCorrect
+                          ? "bg-success/[0.06] border-success/30 text-white"
+                          : "bg-error/[0.06] border-error/30 text-gray-300"
+                      }`}
+                    >
+                      <span className="font-medium truncate max-w-[120px]">
+                        {r.nickname}
+                      </span>
+                      <div className="flex items-center gap-2 font-mono font-semibold">
+                        <span>{r.initialAnswer || "-"}</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-gray-500" />
+                        <span>{r.finalAnswer || "-"}</span>
+                        {r.isCorrect ? (
+                          <CheckCircle2 className="w-4 h-4 text-success" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-error" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Host Next Question Action */}
+              {isHost && (
+                <div className="pt-4 border-t border-card-border/60 flex items-center justify-end">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={handleNextQuestion}
+                    isLoading={isAdvancing}
+                    className="shadow-glow"
+                    rightIcon={<ArrowRight className="w-4 h-4" />}
+                  >
+                    {currentQIndex + 1 >= totalQuestions ? "Finish Mock" : "Next Question"}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

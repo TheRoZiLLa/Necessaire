@@ -78,3 +78,36 @@ export interface RoomDetails {
   mock: MockWithQuestions;
   players: Player[];
 }
+
+/**
+ * Answer & Reveal Types
+ */
+export interface AnswerRecord {
+  id: string;
+  roomId: string;
+  questionId: string;
+  playerId: string;
+  initialAnswer: ChoiceLetter | null;
+  finalAnswer: ChoiceLetter | null;
+  locked: boolean;
+  finalLocked: boolean;
+  isReady: boolean;
+  createdAt: string;
+}
+
+export interface PlayerRevealResult {
+  playerId: string;
+  nickname: string;
+  initialAnswer: ChoiceLetter | null;
+  finalAnswer: ChoiceLetter | null;
+  isCorrect: boolean;
+}
+
+export interface RevealData {
+  questionId: string;
+  correctAnswer: ChoiceLetter;
+  explanation?: string;
+  correctCount: number;
+  totalPlayers: number;
+  results: PlayerRevealResult[];
+}
