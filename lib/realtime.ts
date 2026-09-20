@@ -9,7 +9,7 @@ export type RoomEvent =
   | { type: "PLAYER_LEFT"; playerId: string }
   | { type: "PLAYER_KICKED"; playerId: string; nickname?: string }
   | { type: "ROOM_STARTED"; currentQuestion: number; status: RoomStatus }
-  | { type: "ANSWER_PROGRESS"; answeredCount: number; totalPlayers: number }
+  | { type: "ANSWER_PROGRESS"; answeredCount: number; totalPlayers: number; answeredPlayerIds?: string[] }
   | { type: "STATUS_CHANGED"; status: RoomStatus; currentQuestion?: number }
   | { type: "READY_PROGRESS"; readyCount: number; totalPlayers: number }
   | { type: "FINAL_LOCK_PROGRESS"; finalLockedCount: number; totalPlayers: number }

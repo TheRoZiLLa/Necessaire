@@ -206,6 +206,11 @@ export const translations = {
       hostRevealLiveCount: "ผู้เล่นล็อครอบสองแล้ว {locked} / {total} คน",
       tallyLabel: "สรุปจำนวนคนเลือกแต่ละข้อ:",
       phaseDiscussChangeBadge: "2. ถกเหตุผล & เปลี่ยนคำตอบ",
+      forceProceedBtn: "ข้ามไปช่วงอภิปราย (ดำเนินการต่อ)",
+      hostControlNotice: "Host สามารถกดข้ามได้ทันทีหากมีคนหลุดหรือไม่อยู่",
+      lockedStatus: "ล็อคแล้ว",
+      thinkingStatus: "กำลังคิด...",
+      hostForceProceedToast: "Host กดข้ามไปยังช่วงอภิปรายแล้ว",
     },
   },
   en: {
@@ -413,6 +418,11 @@ export const translations = {
       hostRevealLiveCount: "{locked} / {total} players locked 2nd answer",
       tallyLabel: "Option distribution:",
       phaseDiscussChangeBadge: "2. Discuss & Change",
+      forceProceedBtn: "Proceed to Discussion (Skip Waiting)",
+      hostControlNotice: "Host: You can skip waiting if someone is AFK or disconnected.",
+      lockedStatus: "Locked",
+      thinkingStatus: "Thinking...",
+      hostForceProceedToast: "Host advanced the room to Discussion.",
     },
   },
 } as const;

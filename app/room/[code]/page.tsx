@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use, useCallback } from "react";
+import React, { useEffect, useState, use, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -28,6 +28,7 @@ import {
   Sparkles,
   MessageSquare,
   X,
+  SkipForward,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
@@ -41,6 +42,9 @@ import {
   revealAnswer,
   advanceToNextQuestion,
   getRound1Answers,
+  checkAndAdvanceAnsweringPhase,
+  forceProceedToDiscussion,
+  getQuestionAnswerStatus,
 } from "@/lib/loop";
 import { calculateRoomSummary, startReviewMode, exitReviewMode } from "@/lib/summary";
 import { useRoomRealtime, broadcastRoomEvent, RoomEvent } from "@/lib/realtime";
@@ -97,7 +101,14 @@ export default function RoomLobbyPage({
   const [selectedInitialChoice, setSelectedInitialChoice] = useState<ChoiceLetter | null>(null);
   const [isInitialLocked, setIsInitialLocked] = useState(false);
   const [answeredCount, setAnsweredCount] = useState(0);
+  const [answeredPlayerIds, setAnsweredPlayerIds] = useState<string[]>([]);
   const [isSubmittingInitial, setIsSubmittingInitial] = useState(false);
+  const [isForceProceeding, setIsForceProceeding] = useState(false);
+
+  // Live state refs for Realtime events to avoid stale closures
+  const currentQuestionRef = useRef<any>(null);
+  const roomRef = useRef<Room | null>(null);
+  const isHostRef = useRef<boolean>(false);
 
   // Discussion Phase
   const [isReady, setIsReady] = useState(false);
@@ -202,6 +213,31 @@ export default function RoomLobbyPage({
     };
   }, [loadRoom]);
 
+  // Notify room when tab closes or navigates away
+  useEffect(() => {
+    if (!roomCode || !currentPlayerId) return;
+
+    const handleUnload = () => {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        try {
+          const channel = new BroadcastChannel(`necessaire-room-${roomCode.trim().toUpperCase()}`);
+          channel.postMessage({
+            type: "PLAYER_LEFT",
+            playerId: currentPlayerId,
+          });
+          channel.close();
+        } catch {}
+      }
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    window.addEventListener("pagehide", handleUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("pagehide", handleUnload);
+    };
+  }, [roomCode, currentPlayerId]);
+
   // Load summary when room reaches FINISHED
   const loadSummaryData = useCallback(async () => {
     if (!currentPlayerId) return;
@@ -227,6 +263,7 @@ export default function RoomLobbyPage({
     setSelectedInitialChoice(null);
     setIsInitialLocked(false);
     setAnsweredCount(0);
+    setAnsweredPlayerIds([]);
     setIsReady(false);
     setReadyCount(0);
     setChangeMode(null);
@@ -259,6 +296,19 @@ export default function RoomLobbyPage({
             }
             return prev.filter((p) => p.id !== event.playerId);
           });
+          setAnsweredPlayerIds((prev) => prev.filter((id) => id !== event.playerId));
+
+          if (roomRef.current?.status === "ANSWERING" && currentQuestionRef.current?.id) {
+            checkAndAdvanceAnsweringPhase(roomCode, currentQuestionRef.current.id).then((adv) => {
+              if (adv.advanced) {
+                setRoom((prev) => (prev ? { ...prev, status: "DISCUSSION" } : null));
+                info(t.room.discussNoticeTitle || "Everyone has answered! Discuss your answers in Discord.", "Discussion Time");
+              } else {
+                setAnsweredCount(adv.answeredCount);
+                setAnsweredPlayerIds(adv.answeredPlayerIds);
+              }
+            });
+          }
           break;
 
         case "PLAYER_KICKED": {
@@ -277,7 +327,20 @@ export default function RoomLobbyPage({
             return;
           }
           setPlayers((prev) => prev.filter((p) => p.id !== event.playerId));
+          setAnsweredPlayerIds((prev) => prev.filter((id) => id !== event.playerId));
           info(t.room.kickedToast.replace("{name}", event.nickname || "Player"));
+
+          if (roomRef.current?.status === "ANSWERING" && currentQuestionRef.current?.id) {
+            checkAndAdvanceAnsweringPhase(roomCode, currentQuestionRef.current.id).then((adv) => {
+              if (adv.advanced) {
+                setRoom((prev) => (prev ? { ...prev, status: "DISCUSSION" } : null));
+                info(t.room.discussNoticeTitle || "Everyone has answered! Discuss your answers in Discord.", "Discussion Time");
+              } else {
+                setAnsweredCount(adv.answeredCount);
+                setAnsweredPlayerIds(adv.answeredPlayerIds);
+              }
+            });
+          }
           break;
         }
 
@@ -298,6 +361,9 @@ export default function RoomLobbyPage({
 
         case "ANSWER_PROGRESS":
           setAnsweredCount(event.answeredCount);
+          if (event.answeredPlayerIds) {
+            setAnsweredPlayerIds(event.answeredPlayerIds);
+          }
           break;
 
         case "STATUS_CHANGED":
@@ -469,6 +535,24 @@ export default function RoomLobbyPage({
   const currentQIndex = (room?.currentQuestion || 1) - 1;
   const currentQuestion = activeQuestionList[currentQIndex] || activeQuestionList[0];
 
+  // Sync refs for event handlers to access current values without stale closures
+  currentQuestionRef.current = currentQuestion;
+  roomRef.current = room;
+  isHostRef.current = isHost;
+
+  // Sync initial answer state when room enters or reloads in ANSWERING phase
+  useEffect(() => {
+    if (room?.status === "ANSWERING" && currentQuestion?.id) {
+      getQuestionAnswerStatus(roomCode, currentQuestion.id).then((status) => {
+        setAnsweredCount(status.answeredCount);
+        setAnsweredPlayerIds(status.answeredPlayerIds);
+        if (currentPlayerId && status.answeredPlayerIds.includes(currentPlayerId)) {
+          setIsInitialLocked(true);
+        }
+      });
+    }
+  }, [room?.status, currentQuestion?.id, roomCode, currentPlayerId]);
+
   // Load Round 1 answers for Discuss & Change phase
   const loadRound1Answers = useCallback(
     async (qId?: string) => {
@@ -520,7 +604,21 @@ export default function RoomLobbyPage({
       const res = await kickPlayer(roomCode, playerId, currentPlayerId);
       if (res.success) {
         setPlayers((prev) => prev.filter((p) => p.id !== playerId));
+        setAnsweredPlayerIds((prev) => prev.filter((id) => id !== playerId));
         success(t.room.kickedToast.replace("{name}", nickname));
+
+        // Immediately check if all remaining active players have answered
+        if (room?.status === "ANSWERING" && currentQuestion) {
+          const adv = await checkAndAdvanceAnsweringPhase(roomCode, currentQuestion.id);
+          if (adv.advanced) {
+            setRoom((prev) => (prev ? { ...prev, status: "DISCUSSION" } : null));
+            loadRound1Answers(currentQuestion.id);
+            info(t.room.discussNoticeTitle || "Everyone has answered! Discuss your answers in Discord.", "Discussion Time");
+          } else {
+            setAnsweredCount(adv.answeredCount);
+            setAnsweredPlayerIds(adv.answeredPlayerIds);
+          }
+        }
       } else {
         error(res.error || "Failed to remove player.");
       }
@@ -549,11 +647,13 @@ export default function RoomLobbyPage({
       if (res.success) {
         setIsInitialLocked(true);
         setAnsweredCount(res.answeredCount);
+        setAnsweredPlayerIds(res.answeredPlayerIds);
 
         await broadcastRoomEvent(roomCode, {
           type: "ANSWER_PROGRESS",
           answeredCount: res.answeredCount,
           totalPlayers: res.totalPlayers,
+          answeredPlayerIds: res.answeredPlayerIds,
         });
 
         if (res.allAnswered) {
@@ -572,6 +672,26 @@ export default function RoomLobbyPage({
       error(err.message || "Network error locking answer.");
     } finally {
       setIsSubmittingInitial(false);
+    }
+  };
+
+  // Host force proceeds to Discussion (skips waiting for absent / disconnected players)
+  const handleForceProceedToDiscussion = async () => {
+    if (!isHost || !currentQuestion) return;
+    setIsForceProceeding(true);
+    try {
+      const res = await forceProceedToDiscussion(roomCode);
+      if (res.success) {
+        setRoom((prev) => (prev ? { ...prev, status: "DISCUSSION" } : null));
+        loadRound1Answers(currentQuestion.id);
+        info(t.room.hostForceProceedToast || "Host advanced the room to Discussion.", "Discussion Time");
+      } else {
+        error(res.error || "Failed to proceed to discussion.");
+      }
+    } catch (err: any) {
+      error(err.message || "Error proceeding to discussion.");
+    } finally {
+      setIsForceProceeding(false);
     }
   };
 
@@ -1313,6 +1433,19 @@ export default function RoomLobbyPage({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      {room.status === "ANSWERING" && (
+                        answeredPlayerIds.includes(p.id) ? (
+                          <span className="text-[10px] text-success flex items-center gap-1 bg-success/10 border border-success/30 px-2 py-0.5 rounded-full font-medium">
+                            <CheckCircle2 className="w-3 h-3" />
+                            {t.room.lockedStatus}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-amber-400 flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium">
+                            <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                            {t.room.thinkingStatus}
+                          </span>
+                        )
+                      )}
                       {p.isHost && (
                         <span className="text-[10px] font-bold text-amber-400 uppercase px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30">
                           {t.room.hostBadge}
@@ -1432,6 +1565,26 @@ export default function RoomLobbyPage({
                   </span>
                 )}
               </div>
+
+              {/* Host Control: Skip waiting / Force proceed to Discussion */}
+              {isHost && (
+                <div className="pt-3.5 border-t border-card-border/50 flex flex-col sm:flex-row items-center justify-between gap-3 bg-amber-500/5 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-4 rounded-b-xl">
+                  <div className="text-xs text-gray-400 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                    <span>{t.room.hostControlNotice}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleForceProceedToDiscussion}
+                    isLoading={isForceProceeding}
+                    className="w-full sm:w-auto text-xs text-amber-400 border-amber-500/40 hover:bg-amber-500/10 hover:border-amber-400 font-semibold shrink-0"
+                    leftIcon={<SkipForward className="w-3.5 h-3.5" />}
+                  >
+                    {t.room.forceProceedBtn}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 

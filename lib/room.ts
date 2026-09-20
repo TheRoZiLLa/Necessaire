@@ -427,11 +427,21 @@ export async function leaveRoom(
   roomCode: string,
   playerId: string
 ): Promise<void> {
+  const normalizedCode = roomCode.trim().toUpperCase();
   if (isSupabaseConfigured()) {
     try {
       const supabase = getSupabaseClient();
       if (supabase) {
         await supabase.from("players").delete().eq("id", playerId);
+        // Clean up answers for this player
+        const { data: roomData } = await supabase
+          .from("rooms")
+          .select("id")
+          .eq("room_code", normalizedCode)
+          .single();
+        if (roomData) {
+          await supabase.from("answers").delete().eq("player_id", playerId).eq("room_id", roomData.id);
+        }
       }
     } catch (err) {
       console.warn("Failed to delete player in Supabase:", err);
@@ -440,6 +450,20 @@ export async function leaveRoom(
 
   const players = getLocalPlayers().filter((p) => p.id !== playerId);
   saveLocalPlayers(players);
+
+  // Clean up local answers
+  if (typeof window !== "undefined") {
+    try {
+      const rawAns = localStorage.getItem("necessaire_answers");
+      if (rawAns) {
+        const answers = JSON.parse(rawAns);
+        localStorage.setItem(
+          "necessaire_answers",
+          JSON.stringify(answers.filter((a: any) => a.playerId !== playerId))
+        );
+      }
+    } catch {}
+  }
 }
 
 /**
@@ -486,6 +510,20 @@ export async function kickPlayer(
   // Remove from local storage
   const players = getLocalPlayers().filter((p) => p.id !== playerIdToKick);
   saveLocalPlayers(players);
+
+  // Clean up local answers
+  if (typeof window !== "undefined") {
+    try {
+      const rawAns = localStorage.getItem("necessaire_answers");
+      if (rawAns) {
+        const answers = JSON.parse(rawAns);
+        localStorage.setItem(
+          "necessaire_answers",
+          JSON.stringify(answers.filter((a: any) => a.playerId !== playerIdToKick))
+        );
+      }
+    } catch {}
+  }
 
   // Broadcast kick event
   await broadcastRoomEvent(normalizedCode, {

@@ -1,6 +1,7 @@
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase";
 import { getRoomDetails } from "./room";
 import { getMockById } from "./storage";
+import { broadcastRoomEvent } from "./realtime";
 import {
   AnswerRecord,
   ChoiceLetter,
@@ -44,13 +45,24 @@ export async function submitInitialAnswer(
   answeredCount: number;
   totalPlayers: number;
   allAnswered: boolean;
+  answeredPlayerIds: string[];
   error?: string;
 }> {
   const roomDetails = await getRoomDetails(roomCode);
-  if (!roomDetails) return { success: false, answeredCount: 0, totalPlayers: 0, allAnswered: false, error: "Room not found" };
+  if (!roomDetails) {
+    return {
+      success: false,
+      answeredCount: 0,
+      totalPlayers: 0,
+      allAnswered: false,
+      answeredPlayerIds: [],
+      error: "Room not found",
+    };
+  }
 
   const roomId = roomDetails.room.id;
-  const totalPlayers = roomDetails.players.length;
+  const activePlayerIds = roomDetails.players.map((p) => p.id);
+  const totalPlayers = activePlayerIds.length;
 
   if (isSupabaseConfigured()) {
     try {
@@ -73,24 +85,26 @@ export async function submitInitialAnswer(
 
         if (upsertError) throw new Error(upsertError.message);
 
-        // Count locked answers for this question
-        const { count, error: countError } = await supabase
+        // Count locked answers for this question specifically from active players
+        const { data, error: countError } = await supabase
           .from("answers")
-          .select("*", { count: "exact", head: true })
+          .select("player_id")
           .eq("room_id", roomId)
           .eq("question_id", questionId)
-          .eq("locked", true);
+          .eq("locked", true)
+          .in("player_id", activePlayerIds);
 
         if (countError) throw new Error(countError.message);
 
-        const answeredCount = count || 0;
+        const answeredPlayerIds = data ? data.map((d: any) => d.player_id) : [];
+        const answeredCount = answeredPlayerIds.length;
         const allAnswered = answeredCount >= totalPlayers && totalPlayers > 0;
 
         if (allAnswered) {
           await supabase.from("rooms").update({ status: "DISCUSSION" }).eq("id", roomId);
         }
 
-        return { success: true, answeredCount, totalPlayers, allAnswered };
+        return { success: true, answeredCount, totalPlayers, allAnswered, answeredPlayerIds };
       }
     } catch (err: any) {
       console.warn("Supabase submitInitialAnswer error, falling back to local:", err.message);
@@ -127,9 +141,14 @@ export async function submitInitialAnswer(
   saveLocalAnswers(allAnswers);
 
   const currentQAnswers = allAnswers.filter(
-    (a) => a.roomId === roomId && a.questionId === questionId && a.locked
+    (a) =>
+      a.roomId === roomId &&
+      a.questionId === questionId &&
+      a.locked &&
+      activePlayerIds.includes(a.playerId)
   );
-  const answeredCount = currentQAnswers.length;
+  const answeredPlayerIds = currentQAnswers.map((a) => a.playerId);
+  const answeredCount = answeredPlayerIds.length;
   const allAnswered = answeredCount >= totalPlayers && totalPlayers > 0;
 
   if (allAnswered) {
@@ -144,7 +163,200 @@ export async function submitInitialAnswer(
     }
   }
 
-  return { success: true, answeredCount, totalPlayers, allAnswered };
+  return { success: true, answeredCount, totalPlayers, allAnswered, answeredPlayerIds };
+}
+
+/**
+ * Get accurate count and player IDs of who has locked their initial answer for a question.
+ */
+export async function getQuestionAnswerStatus(
+  roomCode: string,
+  questionId: string
+): Promise<{
+  answeredCount: number;
+  totalPlayers: number;
+  answeredPlayerIds: string[];
+}> {
+  const normalizedCode = roomCode.trim().toUpperCase();
+  const roomDetails = await getRoomDetails(normalizedCode);
+  if (!roomDetails) return { answeredCount: 0, totalPlayers: 0, answeredPlayerIds: [] };
+
+  const { room, players } = roomDetails;
+  const activePlayerIds = players.map((p) => p.id);
+  const totalPlayers = players.length;
+
+  let answeredPlayerIds: string[] = [];
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data } = await supabase
+          .from("answers")
+          .select("player_id")
+          .eq("room_id", room.id)
+          .eq("question_id", questionId)
+          .eq("locked", true)
+          .in("player_id", activePlayerIds);
+
+        if (data) {
+          answeredPlayerIds = data.map((d: any) => d.player_id);
+        }
+      }
+    } catch (err: any) {
+      console.warn("Supabase getQuestionAnswerStatus error:", err.message);
+    }
+  }
+
+  if (answeredPlayerIds.length === 0) {
+    const allAnswers = getLocalAnswers();
+    const currentQAnswers = allAnswers.filter(
+      (a) =>
+        a.roomId === room.id &&
+        a.questionId === questionId &&
+        a.locked &&
+        activePlayerIds.includes(a.playerId)
+    );
+    answeredPlayerIds = currentQAnswers.map((a) => a.playerId);
+  }
+
+  return {
+    answeredCount: answeredPlayerIds.length,
+    totalPlayers,
+    answeredPlayerIds,
+  };
+}
+
+/**
+ * Check if all currently active players have answered the question.
+ * If so, transition to DISCUSSION, broadcast event, and return advanced: true.
+ * If not, broadcast updated ANSWER_PROGRESS and return advanced: false.
+ */
+export async function checkAndAdvanceAnsweringPhase(
+  roomCode: string,
+  questionId: string
+): Promise<{
+  advanced: boolean;
+  answeredCount: number;
+  totalPlayers: number;
+  answeredPlayerIds: string[];
+}> {
+  const normalizedCode = roomCode.trim().toUpperCase();
+  const roomDetails = await getRoomDetails(normalizedCode);
+  if (!roomDetails) return { advanced: false, answeredCount: 0, totalPlayers: 0, answeredPlayerIds: [] };
+
+  const { room, players } = roomDetails;
+  if (room.status !== "ANSWERING") {
+    return {
+      advanced: false,
+      answeredCount: 0,
+      totalPlayers: players.length,
+      answeredPlayerIds: [],
+    };
+  }
+
+  const activePlayerIds = players.map((p) => p.id);
+  const totalPlayers = activePlayerIds.length;
+
+  if (totalPlayers === 0) {
+    return { advanced: false, answeredCount: 0, totalPlayers: 0, answeredPlayerIds: [] };
+  }
+
+  const status = await getQuestionAnswerStatus(roomCode, questionId);
+  const answeredCount = status.answeredCount;
+  const answeredPlayerIds = status.answeredPlayerIds;
+  const allAnswered = answeredCount >= totalPlayers && totalPlayers > 0;
+
+  if (allAnswered) {
+    // Transition to DISCUSSION
+    if (isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          await supabase.from("rooms").update({ status: "DISCUSSION" }).eq("id", room.id);
+        }
+      } catch (err: any) {
+        console.warn("Supabase checkAndAdvance update error:", err.message);
+      }
+    }
+
+    if (typeof window !== "undefined") {
+      const localRoomsRaw = localStorage.getItem("necessaire_rooms");
+      if (localRoomsRaw) {
+        const rooms = JSON.parse(localRoomsRaw);
+        const updatedRooms = rooms.map((r: any) =>
+          r.id === room.id ? { ...r, status: "DISCUSSION" } : r
+        );
+        localStorage.setItem("necessaire_rooms", JSON.stringify(updatedRooms));
+      }
+    }
+
+    await broadcastRoomEvent(normalizedCode, {
+      type: "ANSWER_PROGRESS",
+      answeredCount,
+      totalPlayers,
+      answeredPlayerIds,
+    });
+    await broadcastRoomEvent(normalizedCode, {
+      type: "STATUS_CHANGED",
+      status: "DISCUSSION",
+    });
+
+    return { advanced: true, answeredCount, totalPlayers, answeredPlayerIds };
+  } else {
+    // Broadcast updated progress
+    await broadcastRoomEvent(normalizedCode, {
+      type: "ANSWER_PROGRESS",
+      answeredCount,
+      totalPlayers,
+      answeredPlayerIds,
+    });
+    return { advanced: false, answeredCount, totalPlayers, answeredPlayerIds };
+  }
+}
+
+/**
+ * Host manually forces the room from ANSWERING to DISCUSSION phase,
+ * skipping waiting for remaining / disconnected players.
+ */
+export async function forceProceedToDiscussion(
+  roomCode: string
+): Promise<{ success: boolean; error?: string }> {
+  const normalizedCode = roomCode.trim().toUpperCase();
+  const roomDetails = await getRoomDetails(normalizedCode);
+  if (!roomDetails) return { success: false, error: "Room not found" };
+
+  const roomId = roomDetails.room.id;
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        await supabase.from("rooms").update({ status: "DISCUSSION" }).eq("id", roomId);
+      }
+    } catch (err: any) {
+      console.warn("Supabase forceProceedToDiscussion error:", err.message);
+    }
+  }
+
+  // Local storage update
+  if (typeof window !== "undefined") {
+    const localRoomsRaw = localStorage.getItem("necessaire_rooms");
+    if (localRoomsRaw) {
+      const rooms = JSON.parse(localRoomsRaw);
+      const updatedRooms = rooms.map((r: any) =>
+        r.id === roomId ? { ...r, status: "DISCUSSION" } : r
+      );
+      localStorage.setItem("necessaire_rooms", JSON.stringify(updatedRooms));
+    }
+  }
+
+  await broadcastRoomEvent(normalizedCode, {
+    type: "STATUS_CHANGED",
+    status: "DISCUSSION",
+  });
+
+  return { success: true };
 }
 
 /**
