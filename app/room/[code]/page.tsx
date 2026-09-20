@@ -23,6 +23,8 @@ import {
   Lock,
   RefreshCw,
   Eye,
+  RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
@@ -36,6 +38,7 @@ import {
   revealAnswer,
   advanceToNextQuestion,
 } from "@/lib/loop";
+import { calculateRoomSummary, startReviewMode, exitReviewMode } from "@/lib/summary";
 import { useRoomRealtime, broadcastRoomEvent, RoomEvent } from "@/lib/realtime";
 import {
   Room,
@@ -44,6 +47,7 @@ import {
   ChoiceLetter,
   RevealData,
   RoomStatus,
+  RoomSummary,
 } from "@/types";
 
 export default function RoomLobbyPage({
@@ -91,6 +95,12 @@ export default function RoomLobbyPage({
   const [isRevealing, setIsRevealing] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
 
+  // Summary & Review Mode States
+  const [summary, setSummary] = useState<RoomSummary | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [isStartingReview, setIsStartingReview] = useState(false);
+  const [isExitingReview, setIsExitingReview] = useState(false);
+
   // Fetch initial room details
   const loadRoom = useCallback(async () => {
     try {
@@ -133,6 +143,26 @@ export default function RoomLobbyPage({
     loadRoom();
   }, [loadRoom]);
 
+  // Load summary when room reaches FINISHED
+  const loadSummaryData = useCallback(async () => {
+    if (!currentPlayerId) return;
+    setLoadingSummary(true);
+    try {
+      const data = await calculateRoomSummary(roomCode, currentPlayerId);
+      setSummary(data);
+    } catch (err) {
+      console.error("Failed to load summary:", err);
+    } finally {
+      setLoadingSummary(false);
+    }
+  }, [roomCode, currentPlayerId]);
+
+  useEffect(() => {
+    if (room?.status === "FINISHED") {
+      loadSummaryData();
+    }
+  }, [room?.status, loadSummaryData]);
+
   // Reset local form states for a new question
   const resetQuestionStates = useCallback(() => {
     setSelectedInitialChoice(null);
@@ -171,6 +201,7 @@ export default function RoomLobbyPage({
                   ...prev,
                   status: event.status,
                   currentQuestion: event.currentQuestion,
+                  reviewQuestionIds: [],
                 }
               : null
           );
@@ -225,10 +256,39 @@ export default function RoomLobbyPage({
           );
           resetQuestionStates();
           if (event.status === "FINISHED") {
-            success("Mock test completed! Well done.", "Finished");
+            success("Mock test completed! Calculating summary...", "Finished");
           } else {
             info(`Moving to Question ${event.currentQuestion}.`, "Next Question");
           }
+          break;
+
+        case "START_REVIEW":
+          setRoom((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  reviewQuestionIds: event.questionIds,
+                  currentQuestion: 1,
+                  status: "ANSWERING",
+                }
+              : null
+          );
+          resetQuestionStates();
+          success(`Host started Review Mode for ${event.questionIds.length} missed questions!`, "Review Mode");
+          break;
+
+        case "BACK_TO_SUMMARY":
+          setRoom((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  reviewQuestionIds: [],
+                  status: "FINISHED",
+                }
+              : null
+          );
+          resetQuestionStates();
+          info("Returned to test summary.", "Summary");
           break;
       }
     },
@@ -274,7 +334,7 @@ export default function RoomLobbyPage({
           status: "ANSWERING",
         });
         setRoom((prev) =>
-          prev ? { ...prev, status: "ANSWERING", currentQuestion: 1 } : null
+          prev ? { ...prev, status: "ANSWERING", currentQuestion: 1, reviewQuestionIds: [] } : null
         );
         resetQuestionStates();
         success("Mock test started! Displaying Question 1 to all players.", "Started");
@@ -302,11 +362,23 @@ export default function RoomLobbyPage({
   };
 
   // -------------------------------------------------------------
+  // Determine Active Question (Normal vs Review Mode)
+  // -------------------------------------------------------------
+  const isReviewMode = Boolean(room?.reviewQuestionIds && room.reviewQuestionIds.length > 0);
+
+  const activeQuestionList = isReviewMode
+    ? (room?.reviewQuestionIds || [])
+        .map((id) => mock?.questions.find((q) => q.id === id)!)
+        .filter(Boolean)
+    : mock?.questions || [];
+
+  const totalQuestions = activeQuestionList.length;
+  const currentQIndex = (room?.currentQuestion || 1) - 1;
+  const currentQuestion = activeQuestionList[currentQIndex] || activeQuestionList[0];
+
+  // -------------------------------------------------------------
   // 1. Submit Initial Answer (ANSWERING phase)
   // -------------------------------------------------------------
-  const currentQIndex = (room?.currentQuestion || 1) - 1;
-  const currentQuestion = mock?.questions[currentQIndex] || mock?.questions[0];
-
   const handleLockInitialAnswer = async () => {
     if (!selectedInitialChoice || !currentQuestion || !currentPlayerId) return;
 
@@ -394,7 +466,6 @@ export default function RoomLobbyPage({
   const handleFinalLock = async () => {
     if (!currentQuestion || !currentPlayerId) return;
 
-    // Determine final choice: either changed choice or keep initial choice
     const finalChoice =
       changeMode === "change" && selectedFinalChoice
         ? selectedFinalChoice
@@ -485,6 +556,75 @@ export default function RoomLobbyPage({
       error(err.message || "Failed to advance question.");
     } finally {
       setIsAdvancing(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 6. Review Mode Handlers
+  // -------------------------------------------------------------
+  const handleLaunchReview = async () => {
+    if (!isHost || !summary || summary.needsReviewQuestions.length === 0) return;
+
+    setIsStartingReview(true);
+    try {
+      const questionIds = summary.needsReviewQuestions.map((q) => q.questionId);
+      const res = await startReviewMode(roomCode, questionIds);
+
+      if (res.success) {
+        await broadcastRoomEvent(roomCode, {
+          type: "START_REVIEW",
+          questionIds,
+        });
+
+        setRoom((prev) =>
+          prev
+            ? {
+                ...prev,
+                reviewQuestionIds: questionIds,
+                currentQuestion: 1,
+                status: "ANSWERING",
+              }
+            : null
+        );
+        resetQuestionStates();
+        success("Review mode launched for missed questions!", "Review Started");
+      } else {
+        error(res.error || "Failed to start review mode.");
+      }
+    } catch (err: any) {
+      error(err.message || "Failed to launch review mode.");
+    } finally {
+      setIsStartingReview(false);
+    }
+  };
+
+  const handleBackToSummary = async () => {
+    if (!isHost) return;
+
+    setIsExitingReview(true);
+    try {
+      const res = await exitReviewMode(roomCode);
+      if (res.success) {
+        await broadcastRoomEvent(roomCode, {
+          type: "BACK_TO_SUMMARY",
+        });
+
+        setRoom((prev) =>
+          prev
+            ? {
+                ...prev,
+                reviewQuestionIds: [],
+                status: "FINISHED",
+              }
+            : null
+        );
+        resetQuestionStates();
+        info("Returned to test summary.", "Summary");
+      }
+    } catch (err: any) {
+      error(err.message || "Failed to exit review mode.");
+    } finally {
+      setIsExitingReview(false);
     }
   };
 
@@ -692,34 +832,125 @@ export default function RoomLobbyPage({
   }
 
   // ==========================================
-  // VIEW 6: FINISHED VIEW (status === "FINISHED")
+  // VIEW 2: MOCK COMPLETE SUMMARY (status === "FINISHED")
   // ==========================================
   if (room.status === "FINISHED") {
     return (
-      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-16 text-center space-y-6">
-        <Card className="p-8 sm:p-12 space-y-6 border-primary/40 shadow-glow">
-          <div className="w-16 h-16 rounded-2xl bg-primary/20 text-primary-accent flex items-center justify-center mx-auto border border-primary/40">
-            <Sparkles className="w-8 h-8" />
-          </div>
-
-          <div className="space-y-2">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Mock Test Complete!
+      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-12 sm:py-16 space-y-8 text-center">
+        <Card className="p-8 sm:p-10 space-y-6 border-card-border shadow-2xl">
+          {/* Header */}
+          <div className="space-y-1">
+            <span className="text-xs font-mono font-semibold tracking-widest text-primary-accent uppercase">
+              Pre-Exam Drill
+            </span>
+            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+              MOCK COMPLETE
             </h1>
-            <p className="text-sm text-gray-300 max-w-md mx-auto">
-              You and your study group have finished all {mock.questions.length} questions in{" "}
-              <strong className="text-white">{mock.title}</strong>.
+            <p className="text-xs sm:text-sm text-gray-400">
+              {mock.title} • {players.length} participants
             </p>
           </div>
 
-          <div className="pt-4 flex flex-wrap justify-center gap-3">
+          {/* Big Score Box */}
+          {loadingSummary ? (
+            <div className="py-8 flex justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : summary ? (
+            <div className="p-6 rounded-2xl bg-[#0F1117] border border-card-border space-y-3">
+              <div className="text-4xl sm:text-5xl font-black text-white font-mono">
+                {summary.playerScore.correct} / {summary.totalQuestions}
+              </div>
+
+              <div className="flex items-center justify-center gap-6 text-sm font-semibold pt-1">
+                <span className="text-success flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                  Correct: {summary.playerScore.correct}
+                </span>
+                <span className="text-gray-500">•</span>
+                <span className="text-error flex items-center gap-1.5">
+                  <XCircle className="w-4 h-4" />
+                  Wrong: {summary.playerScore.wrong}
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Needs Review Section */}
+          {summary && (
+            <div className="space-y-4 text-left pt-2 border-t border-card-border/60">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  Needs Review
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Questions where players in this room made the most mistakes (up to 5 questions).
+                </p>
+              </div>
+
+              {summary.needsReviewQuestions.length > 0 ? (
+                <div className="space-y-2.5">
+                  {summary.needsReviewQuestions.map((nr) => (
+                    <div
+                      key={nr.questionId}
+                      className="p-3.5 rounded-xl bg-[#0F1117] border border-card-border flex items-center justify-between gap-4"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                            Q{nr.originalQuestionNumber}
+                          </span>
+                          <span className="text-xs font-medium text-gray-400 truncate">
+                            {nr.questionText}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-xs font-semibold text-gray-300 font-mono">
+                        <span className="text-amber-400 font-bold">{nr.correctCount}</span> /{" "}
+                        {nr.totalPlayers} correct
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Review Mode Trigger Button */}
+                  <div className="pt-2">
+                    {isHost ? (
+                      <Button
+                        variant="primary"
+                        size="md"
+                        onClick={handleLaunchReview}
+                        isLoading={isStartingReview}
+                        className="w-full shadow-glow"
+                        leftIcon={<RotateCcw className="w-4 h-4" />}
+                      >
+                        Review These Questions ({summary.needsReviewQuestions.length})
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-center text-gray-500 italic py-1">
+                        Waiting for host to review these questions or wrap up...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-success/10 border border-success/30 text-center text-xs text-success font-medium">
+                  ✓ Perfect run! All questions were answered correctly across the room.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Quick Exit Links */}
+          <div className="pt-4 border-t border-card-border/60 flex flex-wrap justify-center gap-3">
             <Link href={`/mock/${mock.id}`}>
-              <Button variant="outline" size="md">
-                Review Test & Explanations
+              <Button variant="outline" size="sm">
+                Review Full Answer Key
               </Button>
             </Link>
             <Link href="/">
-              <Button variant="primary" size="md">
+              <Button variant="secondary" size="sm">
                 Back to Home
               </Button>
             </Link>
@@ -730,11 +961,10 @@ export default function RoomLobbyPage({
   }
 
   // ==========================================
-  // ACTIVE QUESTION SHARED HEADER
+  // VIEW 3: ACTIVE TEST QUESTION (Normal or Review Mode)
   // ==========================================
   if (!currentQuestion) return null;
 
-  const totalQuestions = mock.questions.length;
   const choices: { letter: ChoiceLetter; text: string }[] = [
     { letter: "A", text: currentQuestion.choiceA },
     { letter: "B", text: currentQuestion.choiceB },
@@ -748,8 +978,13 @@ export default function RoomLobbyPage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-card-border/60 pb-4">
         <div className="flex items-center gap-3">
           <span className="text-lg font-bold text-white font-mono">
-            Q {currentQIndex + 1} / {totalQuestions}
+            {isReviewMode ? "REVIEW Q" : "Q"} {currentQIndex + 1} / {totalQuestions}
           </span>
+          {isReviewMode && (
+            <span className="text-xs text-amber-400 font-medium px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">
+              (Originally Q{currentQuestion.questionNumber})
+            </span>
+          )}
           <span className="text-xs text-gray-400">
             • Room <strong className="font-mono text-gray-200">{roomCode}</strong>
           </span>
@@ -1104,19 +1339,32 @@ export default function RoomLobbyPage({
                 </div>
               </div>
 
-              {/* Host Next Question Action */}
+              {/* Host Advance Action (Next Question or Back to Summary if Review Mode) */}
               {isHost && (
-                <div className="pt-4 border-t border-card-border/60 flex items-center justify-end">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    onClick={handleNextQuestion}
-                    isLoading={isAdvancing}
-                    className="shadow-glow"
-                    rightIcon={<ArrowRight className="w-4 h-4" />}
-                  >
-                    {currentQIndex + 1 >= totalQuestions ? "Finish Mock" : "Next Question"}
-                  </Button>
+                <div className="pt-4 border-t border-card-border/60 flex items-center justify-end gap-3">
+                  {isReviewMode && currentQIndex + 1 >= totalQuestions ? (
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      onClick={handleBackToSummary}
+                      isLoading={isExitingReview}
+                      className="shadow-glow"
+                      leftIcon={<CheckCircle2 className="w-4 h-4" />}
+                    >
+                      Back to Summary
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      onClick={handleNextQuestion}
+                      isLoading={isAdvancing}
+                      className="shadow-glow"
+                      rightIcon={<ArrowRight className="w-4 h-4" />}
+                    >
+                      {currentQIndex + 1 >= totalQuestions ? "Finish Mock" : "Next Question"}
+                    </Button>
+                  )}
                 </div>
               )}
             </div>

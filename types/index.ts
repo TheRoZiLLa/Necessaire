@@ -61,6 +61,7 @@ export interface Room {
   hostId: string;
   currentQuestion: number;
   status: RoomStatus;
+  reviewQuestionIds?: string[];
   createdAt: string;
 }
 
@@ -110,4 +111,25 @@ export interface RevealData {
   correctCount: number;
   totalPlayers: number;
   results: PlayerRevealResult[];
+}
+
+/**
+ * Summary & Needs Review Types
+ */
+export interface NeedsReviewItem {
+  questionId: string;
+  originalQuestionNumber: number;
+  questionText: string;
+  correctCount: number;
+  totalPlayers: number;
+}
+
+export interface RoomSummary {
+  totalQuestions: number;
+  playerScore: {
+    correct: number;
+    wrong: number;
+    total: number;
+  };
+  needsReviewQuestions: NeedsReviewItem[];
 }

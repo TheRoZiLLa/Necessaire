@@ -13,7 +13,9 @@ export type RoomEvent =
   | { type: "READY_PROGRESS"; readyCount: number; totalPlayers: number }
   | { type: "FINAL_LOCK_PROGRESS"; finalLockedCount: number; totalPlayers: number }
   | { type: "ANSWER_REVEALED"; revealData: RevealData }
-  | { type: "NEXT_QUESTION"; currentQuestion: number; status: RoomStatus };
+  | { type: "NEXT_QUESTION"; currentQuestion: number; status: RoomStatus }
+  | { type: "START_REVIEW"; questionIds: string[] }
+  | { type: "BACK_TO_SUMMARY" };
 
 /**
  * Broadcast an event to all clients in the same room via Supabase Realtime and Browser BroadcastChannel.

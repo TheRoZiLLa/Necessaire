@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS rooms (
   host_id UUID,
   current_question INTEGER DEFAULT 0 NOT NULL,
   status TEXT DEFAULT 'LOBBY' NOT NULL CHECK (status IN ('LOBBY', 'ANSWERING', 'DISCUSSION', 'CHANGING', 'REVEAL', 'FINISHED')),
+  review_question_ids TEXT[] DEFAULT '{}' NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 

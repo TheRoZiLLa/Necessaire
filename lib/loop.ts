@@ -446,7 +446,10 @@ export async function advanceToNextQuestion(
 
   const { room, mock } = roomDetails;
   const currentNum = room.currentQuestion || 1;
-  const totalQuestions = mock.questions.length;
+  const isReviewMode = Boolean(room.reviewQuestionIds && room.reviewQuestionIds.length > 0);
+  const totalQuestions = isReviewMode
+    ? room.reviewQuestionIds!.length
+    : mock.questions.length;
 
   const isFinished = currentNum >= totalQuestions;
   const nextStatus: RoomStatus = isFinished ? "FINISHED" : "ANSWERING";

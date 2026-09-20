@@ -218,6 +218,7 @@ export async function getRoomDetails(
             hostId: roomData.host_id,
             currentQuestion: roomData.current_question,
             status: roomData.status as RoomStatus,
+            reviewQuestionIds: roomData.review_question_ids || [],
             createdAt: roomData.created_at,
           };
 
