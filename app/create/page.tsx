@@ -33,10 +33,12 @@ import {
 } from "@/lib/parser";
 import { saveMockWithQuestions } from "@/lib/storage";
 import { ChoiceLetter, ParsedQuestionDraft } from "@/types";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function CreateMockPage() {
   const router = useRouter();
   const { success, error, info } = useToast();
+  const { t, language } = useLanguage();
 
   // Form states
   const [title, setTitle] = useState("");
@@ -268,7 +270,7 @@ export default function CreateMockPage() {
           className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to home</span>
+          <span>{t.create.backHome}</span>
         </Link>
       </div>
 
@@ -277,13 +279,13 @@ export default function CreateMockPage() {
         <div>
           <div className="flex items-center gap-2 text-primary-accent mb-1 text-xs font-semibold uppercase tracking-wider">
             <Layers className="w-4 h-4" />
-            <span>Create & Import</span>
+            <span>{t.create.badge}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Create Mock Test
+            {t.create.title}
           </h1>
           <p className="text-xs sm:text-sm text-gray-400 mt-1">
-            Paste your AI-generated multiple-choice questions, verify, and import.
+            {t.create.desc}
           </p>
         </div>
 
@@ -303,7 +305,7 @@ export default function CreateMockPage() {
               )
             }
           >
-            {copiedLang === "th" ? "คัดลอกแล้ว!" : "Copy Prompt (ภาษาไทย: ก ข ค ง)"}
+            {copiedLang === "th" ? t.create.promptCopied : t.create.copyPromptTh}
           </Button>
 
           <Button
@@ -320,7 +322,7 @@ export default function CreateMockPage() {
               )
             }
           >
-            {copiedLang === "en" ? "Copied EN!" : "Prompt (EN)"}
+            {copiedLang === "en" ? t.create.promptCopied : t.create.copyPromptEn}
           </Button>
         </div>
       </div>
@@ -328,15 +330,15 @@ export default function CreateMockPage() {
       {/* Section 1: Basic Information */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base sm:text-lg">1. Mock Information</CardTitle>
+          <CardTitle className="text-base sm:text-lg">{t.create.step1Title}</CardTitle>
           <CardDescription>
-            Specify the title and subject of this test.
+            {t.create.step1Desc}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
-            label="Mock Title *"
-            placeholder="e.g. ตะลุยโจทย์สังคมศึกษา ม.ปลาย"
+            label={t.create.mockTitleLabel}
+            placeholder={t.create.mockTitlePlaceholder}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             leftIcon={<FileText className="w-4 h-4" />}
@@ -344,8 +346,8 @@ export default function CreateMockPage() {
             required
           />
           <Input
-            label="Subject (Optional)"
-            placeholder="e.g. วิชาสามัญ สังคม"
+            label={t.create.mockSubjectLabel}
+            placeholder={t.create.mockSubjectPlaceholder}
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             leftIcon={<BookOpen className="w-4 h-4" />}
@@ -359,19 +361,19 @@ export default function CreateMockPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-base sm:text-lg">2. Paste AI Questions</CardTitle>
+              <CardTitle className="text-base sm:text-lg">{t.create.step2Title}</CardTitle>
               <CardDescription>
-                รองรับทั้งตัวเลือกภาษาไทย (ก, ข, ค, ง) และภาษาอังกฤษ (A, B, C, D)
+                {t.create.step2Desc}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">Insert Sample:</span>
+              <span className="text-xs text-gray-500">{t.create.insertSampleLabel}</span>
               <button
                 type="button"
                 onClick={() => handleInsertSample("th")}
                 className="text-xs text-primary-accent hover:underline focus:outline-none font-medium"
               >
-                ภาษาไทย (ก-ง)
+                {t.create.insertSampleTh}
               </button>
               <span className="text-gray-600 text-xs">•</span>
               <button
@@ -379,7 +381,7 @@ export default function CreateMockPage() {
                 onClick={() => handleInsertSample("en")}
                 className="text-xs text-gray-400 hover:text-white hover:underline focus:outline-none"
               >
-                English (A-D)
+                {t.create.insertSampleEn}
               </button>
             </div>
           </div>
@@ -410,7 +412,7 @@ export default function CreateMockPage() {
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
             <span className="text-xs text-gray-500">
-              Need questions? Click <strong>&quot;Copy AI Prompt&quot;</strong> above and ask ChatGPT or Claude.
+              {t.create.copyPromptHelp}
             </span>
             <Button
               type="button"
@@ -418,7 +420,7 @@ export default function CreateMockPage() {
               onClick={handleParse}
               leftIcon={<Sparkles className="w-4 h-4" />}
             >
-              Parse Questions
+              {t.create.parseBtn}
             </Button>
           </div>
         </CardContent>
@@ -431,16 +433,16 @@ export default function CreateMockPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-card border border-card-border">
             <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-white">
-                Questions ({parsedQuestions.length})
+                {t.create.questionsLabel} ({parsedQuestions.length})
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/15 text-success border border-success/30">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                {validQuestionsCount} Valid
+                {validQuestionsCount} {t.create.validCount}
               </span>
               {invalidQuestionsCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-error/15 text-error border border-error/30">
                   <AlertTriangle className="w-3.5 h-3.5" />
-                  {invalidQuestionsCount} Needs Fix
+                  {invalidQuestionsCount} {t.create.needsFixCount}
                 </span>
               )}
             </div>
@@ -453,7 +455,7 @@ export default function CreateMockPage() {
                 onClick={handleAddQuestion}
                 leftIcon={<Plus className="w-3.5 h-3.5" />}
               >
-                Add Question
+                {t.create.addQuestionBtn}
               </Button>
             </div>
           </div>
@@ -476,7 +478,7 @@ export default function CreateMockPage() {
                       {q.isValid ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          Valid question
+                          {t.create.validQuestion}
                         </span>
                       ) : (
                         <div className="flex flex-wrap items-center gap-1.5">
@@ -527,26 +529,26 @@ export default function CreateMockPage() {
                   <CardContent className="p-4 sm:p-6 space-y-4">
                     {/* Question Text */}
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-gray-400">Question Text</label>
+                      <label className="text-xs font-medium text-gray-400">{t.create.questionTextLabel}</label>
                       <textarea
                         rows={2}
                         value={q.questionText}
                         onChange={(e) => handleUpdateDraft(q.tempId, { questionText: e.target.value })}
                         className="w-full bg-[#0F1117] text-gray-100 placeholder-gray-600 rounded-lg border border-card-border p-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-                        placeholder="Type question text..."
+                        placeholder={t.create.questionPlaceholder}
                       />
                     </div>
 
                     {/* Choices A - D */}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-gray-400 flex items-center justify-between">
-                        <span>Choices (Click letter button to select correct answer)</span>
+                        <span>{t.create.choicesHeader}</span>
                         <span className="text-[11px] text-gray-500">
-                          Current Correct Answer:{" "}
+                          {t.create.currentCorrectAnswer}{" "}
                           <strong className="text-primary-accent font-bold">
                             {q.correctAnswer
                               ? `${q.correctAnswer} (${THAI_CHOICE_MAP[q.correctAnswer as ChoiceLetter] || ""})`
-                              : "None"}
+                              : t.create.none}
                           </strong>
                         </span>
                       </label>
@@ -567,8 +569,8 @@ export default function CreateMockPage() {
                               key={letter}
                               className={`flex items-center rounded-lg border transition-all ${
                                 isCorrect
-                                  ? "border-success/60 bg-success/[0.04]"
-                                  : "border-card-border bg-[#0F1117]"
+                                    ? "border-success/60 bg-success/[0.04]"
+                                    : "border-card-border bg-[#0F1117]"
                               }`}
                             >
                               <button
@@ -593,7 +595,7 @@ export default function CreateMockPage() {
                                 onChange={(e) =>
                                   handleUpdateDraft(q.tempId, { [fieldName]: e.target.value })
                                 }
-                                placeholder={`Choice ${letter} / ตัวเลือก ${thaiLetter}...`}
+                                placeholder={`${t.create.choicePlaceholder} ${letter} (${thaiLetter})...`}
                                 className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm text-gray-200 placeholder-gray-600 outline-none"
                               />
                             </div>
@@ -604,13 +606,13 @@ export default function CreateMockPage() {
 
                     {/* Explanation */}
                     <div className="space-y-1 pt-1">
-                      <label className="text-xs font-medium text-gray-400">Explanation</label>
+                      <label className="text-xs font-medium text-gray-400">{t.create.explanationLabel}</label>
                       <input
                         type="text"
                         value={q.explanation}
                         onChange={(e) => handleUpdateDraft(q.tempId, { explanation: e.target.value })}
                         className="w-full bg-[#0F1117] text-gray-300 placeholder-gray-600 rounded-lg border border-card-border px-3 py-2 text-xs sm:text-sm outline-none focus:border-primary transition-colors"
-                        placeholder="Add explanation for why the answer is correct..."
+                        placeholder={t.create.explanationPlaceholder}
                       />
                     </div>
                   </CardContent>
@@ -623,12 +625,12 @@ export default function CreateMockPage() {
           <div className="sticky bottom-6 z-30 p-4 rounded-xl bg-card/95 border border-primary/40 shadow-2xl backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-center sm:text-left">
               <h4 className="text-sm font-semibold text-white">
-                Ready to Import {parsedQuestions.length} Questions?
+                {t.create.readyToImportTitle.replace("{count}", String(parsedQuestions.length))}
               </h4>
               <p className="text-xs text-gray-400">
                 {invalidQuestionsCount === 0
-                  ? "All questions are valid and ready to be saved."
-                  : `${invalidQuestionsCount} questions need to be completed before importing.`}
+                  ? t.create.allValidReady
+                  : t.create.incompleteWarning.replace("{count}", String(invalidQuestionsCount))}
               </p>
             </div>
 
@@ -642,7 +644,7 @@ export default function CreateMockPage() {
                 className="w-full sm:w-auto"
                 leftIcon={<CheckCircle2 className="w-4 h-4" />}
               >
-                Import Mock Test
+                {t.create.importBtn}
               </Button>
             </div>
           </div>
@@ -653,20 +655,16 @@ export default function CreateMockPage() {
       <Modal
         isOpen={isIncompleteModalOpen}
         onClose={() => setIsIncompleteModalOpen(false)}
-        title="Cannot Import Incomplete Questions"
-        description="All questions must have valid text, choices A-D, and a chosen answer."
+        title={t.create.incompleteModalTitle}
+        description={t.create.incompleteModalDesc}
       >
         <div className="space-y-3 text-xs sm:text-sm text-gray-300">
           <div className="p-3 rounded-lg bg-error/10 border border-error/30 text-error flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>
-              There are currently <strong>{incompleteCount}</strong> question(s) with missing
-              information.
+              {t.create.incompleteModalMsg.replace("{count}", String(incompleteCount))}
             </span>
           </div>
-          <p>
-            Please review the highlighted items marked with <span className="text-error font-medium">⚠</span>. You must either fill in the missing fields (such as choice C or answer) or delete incomplete questions before importing.
-          </p>
         </div>
         <div className="mt-6 flex justify-end">
           <Button
@@ -674,7 +672,7 @@ export default function CreateMockPage() {
             variant="primary"
             onClick={() => setIsIncompleteModalOpen(false)}
           >
-            Review & Fix
+            {t.create.incompleteModalConfirm}
           </Button>
         </div>
       </Modal>

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { ToastProvider } from "@/components/ui/Toast";
+import { LanguageProvider } from "@/context/LanguageContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -21,12 +22,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="th" className={inter.variable}>
       <body className="min-h-screen bg-background text-gray-100 flex flex-col font-sans">
-        <ToastProvider>
-          <Navbar />
-          <main className="flex-1 flex flex-col">{children}</main>
-        </ToastProvider>
+        <LanguageProvider>
+          <ToastProvider>
+            <Navbar />
+            <main className="flex-1 flex flex-col">{children}</main>
+          </ToastProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

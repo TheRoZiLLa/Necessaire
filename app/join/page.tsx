@@ -11,11 +11,13 @@ import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { validateAndJoinRoom } from "@/lib/room";
 import { broadcastRoomEvent } from "@/lib/realtime";
+import { useLanguage } from "@/context/LanguageContext";
 
 function JoinRoomForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { success, error } = useToast();
+  const { t } = useLanguage();
 
   const [roomCode, setRoomCode] = useState("");
   const [nickname, setNickname] = useState("");
@@ -104,7 +106,7 @@ function JoinRoomForm() {
           className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to home</span>
+          <span>{t.join.backHome}</span>
         </Link>
         <button
           type="button"
@@ -112,7 +114,7 @@ function JoinRoomForm() {
           className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary-accent transition-colors"
         >
           <HelpCircle className="w-3.5 h-3.5" />
-          <span>Need help?</span>
+          <span>{t.join.needHelp}</span>
         </button>
       </div>
 
@@ -121,18 +123,18 @@ function JoinRoomForm() {
           <CardHeader>
             <div className="flex items-center gap-2 text-gray-400 mb-1 text-xs font-semibold uppercase tracking-wider">
               <LogIn className="w-4 h-4 text-primary-accent" />
-              <span>Join Session</span>
+              <span>{t.join.badge}</span>
             </div>
-            <CardTitle className="text-xl sm:text-2xl">Enter Room</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl">{t.join.title}</CardTitle>
             <CardDescription>
-              Enter the room code shared by your host and choose your nickname.
+              {t.join.desc}
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
             {/* Room Code */}
             <Input
-              label="Room Code *"
+              label={t.join.roomCodeLabel}
               placeholder="e.g. AB72"
               value={roomCode}
               onChange={handleRoomCodeChange}
@@ -149,7 +151,7 @@ function JoinRoomForm() {
 
             {/* Nickname */}
             <Input
-              label="Your Nickname *"
+              label={t.join.nicknameLabel}
               placeholder="e.g. Milk"
               value={nickname}
               onChange={(e) => {
@@ -168,14 +170,14 @@ function JoinRoomForm() {
 
           <CardFooter>
             <Link href="/" className="text-xs text-gray-400 hover:text-white transition-colors">
-              Cancel
+              {t.join.cancel}
             </Link>
             <Button
               type="submit"
               variant="primary"
               isLoading={isJoining}
             >
-              Join Room
+              {isJoining ? t.join.joining : t.join.joinBtn}
             </Button>
           </CardFooter>
         </Card>
@@ -185,19 +187,13 @@ function JoinRoomForm() {
       <Modal
         isOpen={isHelpModalOpen}
         onClose={() => setIsHelpModalOpen(false)}
-        title="Joining a Nécessaire Room"
-        description="How to connect with your study group"
+        title={t.join.helpTitle}
+        description={t.join.helpDesc}
       >
         <div className="space-y-3 text-xs sm:text-sm text-gray-300">
-          <p>
-            1. Ask your study group friend who hosted the room for their <strong>4-letter Room Code</strong>.
-          </p>
-          <p>
-            2. Enter a unique <strong>Nickname</strong> so everyone knows whose score is whose after answering.
-          </p>
-          <p>
-            3. Once joined, wait in the <strong>Lobby</strong> until the host starts the test.
-          </p>
+          <p>{t.join.help1}</p>
+          <p>{t.join.help2}</p>
+          <p>{t.join.help3}</p>
         </div>
         <div className="mt-6 flex justify-end">
           <Button
@@ -205,7 +201,7 @@ function JoinRoomForm() {
             variant="secondary"
             onClick={() => setIsHelpModalOpen(false)}
           >
-            Got it
+            {t.join.gotIt}
           </Button>
         </div>
       </Modal>

@@ -1,8 +1,13 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Globe } from "lucide-react";
+import { useLanguage } from "@/context/LanguageContext";
 
 export function Navbar() {
+  const { language, toggleLanguage, t } = useLanguage();
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-card-border/80 bg-background/80 backdrop-blur-md">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -18,25 +23,36 @@ export function Navbar() {
             <span className="text-base font-bold tracking-tight text-white group-hover:text-primary-accent transition-colors">
               Nécessaire
             </span>
-            <span className="text-[10px] text-gray-500 font-medium tracking-wider uppercase hidden sm:inline">
-              Think · Discuss · Remember
+            <span className="text-[10px] text-gray-400 font-medium tracking-wider hidden sm:inline">
+              {t.nav.tagline}
             </span>
           </div>
         </Link>
 
-        {/* Navigation */}
-        <nav className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+        {/* Navigation & Language Switcher */}
+        <nav className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
+          {/* Language Switcher */}
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-card-border bg-card/60 hover:bg-card hover:border-primary-accent/40 text-gray-300 hover:text-white transition-all text-xs font-semibold"
+            title="Switch Language / เปลี่ยนภาษา"
+          >
+            <Globe className="w-3.5 h-3.5 text-primary-accent" />
+            <span>{language === "th" ? "🇹🇭 ไทย" : "🇬🇧 EN"}</span>
+          </button>
+
           <Link
             href="/create"
-            className="px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-card border border-transparent hover:border-card-border transition-all"
+            className="px-2.5 sm:px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-card border border-transparent hover:border-card-border transition-all"
           >
-            Host Test
+            {t.nav.host}
           </Link>
           <Link
             href="/join"
-            className="px-3.5 py-1.5 rounded-lg bg-card text-gray-200 hover:text-white border border-card-border hover:border-primary-accent/40 transition-all font-medium"
+            className="px-3 sm:px-3.5 py-1.5 rounded-lg bg-card text-gray-200 hover:text-white border border-card-border hover:border-primary-accent/40 transition-all font-medium"
           >
-            Join Room
+            {t.nav.join}
           </Link>
         </nav>
       </div>

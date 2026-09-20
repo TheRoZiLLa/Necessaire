@@ -41,6 +41,7 @@ import { calculateRoomSummary, startReviewMode, exitReviewMode } from "@/lib/sum
 import { useRoomRealtime, broadcastRoomEvent, RoomEvent } from "@/lib/realtime";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { formatChoiceLetter } from "@/lib/parser";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Room,
   Player,
@@ -60,6 +61,7 @@ export default function RoomLobbyPage({
   const roomCode = resolvedParams.code.toUpperCase();
   const router = useRouter();
   const { success, error, info } = useToast();
+  const { t } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [room, setRoom] = useState<Room | null>(null);
@@ -710,7 +712,7 @@ export default function RoomLobbyPage({
     return (
       <div className="flex-1 flex flex-col justify-center items-center py-24 space-y-4">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        <p className="text-xs text-gray-400 font-mono tracking-wider">CONNECTING TO ROOM {roomCode}...</p>
+        <p className="text-xs text-gray-400 font-mono tracking-wider">{t.room.connecting.replace("{code}", roomCode)}</p>
       </div>
     );
   }
@@ -720,9 +722,9 @@ export default function RoomLobbyPage({
       <div className="flex-1 flex flex-col justify-center items-center px-4 py-20">
         <Card className="max-w-md w-full text-center p-8 space-y-4">
           <HelpCircle className="w-10 h-10 text-gray-500 mx-auto" />
-          <h2 className="text-xl font-bold text-white">Room Not Found</h2>
+          <h2 className="text-xl font-bold text-white">{t.room.roomNotFoundTitle}</h2>
           <p className="text-xs sm:text-sm text-gray-400">
-            Room <strong>{roomCode}</strong> does not exist or has already ended.
+            {t.room.roomNotFoundDesc.replace("{code}", roomCode)}
           </p>
           {!isSupabaseConfigured() && (
             <div className="text-left bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-200">
@@ -732,7 +734,7 @@ export default function RoomLobbyPage({
           <div className="pt-2">
             <Link href="/join">
               <Button variant="primary" size="sm">
-                Join Another Room
+                {t.room.joinAnotherBtn}
               </Button>
             </Link>
           </div>
@@ -754,13 +756,13 @@ export default function RoomLobbyPage({
             className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-error transition-colors p-1"
           >
             <LogOut className="w-4 h-4" />
-            <span>Leave Lobby</span>
+            <span>{t.room.leaveLobby}</span>
           </button>
 
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
             <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-              Lobby Active
+              {t.room.lobbyActive}
             </span>
           </div>
         </div>
@@ -770,9 +772,9 @@ export default function RoomLobbyPage({
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-xs sm:text-sm text-amber-200 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
             <div className="space-y-1">
-              <p className="font-semibold text-amber-300">Offline / Single-Device Mode</p>
+              <p className="font-semibold text-amber-300">{t.room.offlineWarningTitle}</p>
               <p className="text-amber-200/80 text-xs">
-                Supabase credentials were not detected in this build. Other devices cannot find this room. To allow friends to join, add <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in Vercel Environment Variables and click <strong>Redeploy</strong>.
+                {t.room.offlineWarningDesc}
               </p>
             </div>
           </div>
@@ -783,7 +785,7 @@ export default function RoomLobbyPage({
           <div className="p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
             <div className="space-y-1">
               <span className="text-xs text-gray-400 uppercase tracking-widest font-semibold">
-                Room Code
+                {t.room.roomCode}
               </span>
               <div className="text-4xl sm:text-6xl font-black text-white font-mono tracking-widest py-1 select-all">
                 {roomCode}
@@ -798,7 +800,7 @@ export default function RoomLobbyPage({
                   {mock.subject}
                 </span>
               )}
-              <span className="text-gray-500">• {mock.questions.length} questions</span>
+              <span className="text-gray-500">• {t.mock.questionsCount.replace("{count}", String(mock.questions.length))}</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 w-full sm:w-auto">
@@ -815,7 +817,7 @@ export default function RoomLobbyPage({
                   )
                 }
               >
-                {isCopiedCode ? "Code Copied!" : "Copy Room Code"}
+                {isCopiedCode ? t.room.copiedCode : t.room.copyCode}
               </Button>
               <Button
                 variant="outline"
@@ -830,7 +832,7 @@ export default function RoomLobbyPage({
                   )
                 }
               >
-                {isCopiedLink ? "Link Copied!" : "Copy Invite Link"}
+                {isCopiedLink ? t.room.copiedLink : t.room.copyLink}
               </Button>
             </div>
           </div>
@@ -842,11 +844,11 @@ export default function RoomLobbyPage({
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-primary-accent" />
               <CardTitle className="text-base sm:text-lg">
-                Players in Room ({players.length})
+                {t.room.playersJoined} ({players.length})
               </CardTitle>
             </div>
             <span className="text-xs text-gray-400 hidden sm:inline">
-              Hop on Discord while waiting
+              {t.room.discordWaiting}
             </span>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
@@ -875,7 +877,7 @@ export default function RoomLobbyPage({
                       </div>
                       <div className="truncate">
                         <span className="text-sm font-medium block truncate">
-                          {p.nickname} {isMe && <span className="text-xs text-primary-accent font-normal">(You)</span>}
+                          {p.nickname} {isMe && <span className="text-xs text-primary-accent font-normal">{t.room.youBadge}</span>}
                         </span>
                       </div>
                     </div>
@@ -883,7 +885,7 @@ export default function RoomLobbyPage({
                     {p.isHost && (
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-accent uppercase tracking-wider shrink-0 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
                         <Crown className="w-3 h-3 text-amber-400" />
-                        Host
+                        {t.room.hostBadge}
                       </span>
                     )}
                   </div>
@@ -899,10 +901,10 @@ export default function RoomLobbyPage({
             <>
               <div className="text-center sm:text-left">
                 <h4 className="text-sm font-semibold text-white">
-                  You are the Host
+                  {t.room.youAreHost}
                 </h4>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  When everyone is ready in Discord, start the mock test.
+                  {t.room.hostInstruction}
                 </p>
               </div>
               <Button
@@ -913,14 +915,14 @@ export default function RoomLobbyPage({
                 className="w-full sm:w-auto shadow-glow"
                 leftIcon={<Play className="w-5 h-5 fill-current" />}
               >
-                Start Mock
+                {t.room.startTestBtn}
               </Button>
             </>
           ) : (
             <div className="w-full flex items-center justify-center gap-3 py-2">
               <div className="w-3 h-3 rounded-full bg-primary animate-ping" />
               <span className="text-sm text-gray-300 font-medium text-center">
-                Waiting for host to start the test...
+                {t.room.waitingHost}
               </span>
             </div>
           )}
@@ -942,10 +944,10 @@ export default function RoomLobbyPage({
               Pre-Exam Drill
             </span>
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-              MOCK COMPLETE
+              {t.room.mockComplete}
             </h1>
             <p className="text-xs sm:text-sm text-gray-400">
-              {mock.title} • {players.length} participants
+              {mock.title} • {players.length} {t.room.playersJoined.toLowerCase()}
             </p>
           </div>
 
@@ -963,12 +965,12 @@ export default function RoomLobbyPage({
               <div className="flex items-center justify-center gap-6 text-sm font-semibold pt-1">
                 <span className="text-success flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
-                  Correct: {summary.playerScore.correct}
+                  {t.room.correctCount.replace("{count}", String(summary.playerScore.correct))}
                 </span>
                 <span className="text-gray-500">•</span>
                 <span className="text-error flex items-center gap-1.5">
                   <XCircle className="w-4 h-4" />
-                  Wrong: {summary.playerScore.wrong}
+                  {t.room.wrongCount.replace("{count}", String(summary.playerScore.wrong))}
                 </span>
               </div>
             </div>
@@ -980,10 +982,10 @@ export default function RoomLobbyPage({
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  Needs Review
+                  {t.room.needsReviewTitle}
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Questions where players in this room made the most mistakes (up to 5 questions).
+                  {t.room.needsReviewSubtitle}
                 </p>
               </div>
 
@@ -1023,18 +1025,18 @@ export default function RoomLobbyPage({
                         className="w-full shadow-glow py-3"
                         leftIcon={<RotateCcw className="w-4 h-4" />}
                       >
-                        Review These Questions ({summary.needsReviewQuestions.length})
+                        {t.room.reviewTheseBtn} ({summary.needsReviewQuestions.length})
                       </Button>
                     ) : (
                       <p className="text-xs text-center text-gray-500 italic py-1">
-                        Waiting for host to review these questions or wrap up...
+                        {t.room.waitingHostReview}
                       </p>
                     )}
                   </div>
                 </div>
               ) : (
                 <div className="p-4 rounded-xl bg-success/10 border border-success/30 text-center text-xs text-success font-medium">
-                  ✓ Perfect run! All questions were answered correctly across the room.
+                  ✓ {t.room.perfectRun}
                 </div>
               )}
             </div>
@@ -1044,12 +1046,12 @@ export default function RoomLobbyPage({
           <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row justify-center gap-3">
             <Link href={`/mock/${mock.id}`} className="w-full sm:w-auto">
               <Button variant="outline" size="sm" className="w-full">
-                Review Full Answer Key
+                {t.room.reviewFullKey}
               </Button>
             </Link>
             <Link href="/" className="w-full sm:w-auto">
               <Button variant="secondary" size="sm" className="w-full">
-                Back to Home
+                {t.join.backHome}
               </Button>
             </Link>
           </div>
@@ -1077,13 +1079,13 @@ export default function RoomLobbyPage({
         <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs sm:text-sm flex items-center justify-between gap-3 animate-in fade-in">
           <div className="flex items-center gap-2">
             <WifiOff className="w-4 h-4 shrink-0 text-amber-400" />
-            <span>Host disconnected. Waiting for host to reconnect...</span>
+            <span>{t.room.hostDisconnectedNotice}</span>
           </div>
           <button
             onClick={handleLeaveRoom}
             className="text-xs text-gray-400 hover:text-white underline shrink-0"
           >
-            Leave
+            {t.room.leaveBtn}
           </button>
         </div>
       )}
@@ -1092,11 +1094,11 @@ export default function RoomLobbyPage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-card-border/60 pb-3 sm:pb-4">
         <div className="flex items-center gap-2.5">
           <span className="text-base sm:text-lg font-bold text-white font-mono">
-            {isReviewMode ? "REVIEW Q" : "Q"} {currentQIndex + 1} / {totalQuestions}
+            {isReviewMode ? t.room.reviewModeQ : "Q"} {currentQIndex + 1} / {totalQuestions}
           </span>
           {isReviewMode && (
             <span className="text-xs text-amber-400 font-medium px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">
-              (Originally Q{currentQuestion.questionNumber})
+              {t.room.originallyQ.replace("{num}", String(currentQuestion.questionNumber))}
             </span>
           )}
           <span className="text-xs text-gray-400">
@@ -1110,7 +1112,7 @@ export default function RoomLobbyPage({
             className="text-[11px] px-2 py-0.5 rounded border border-card-border bg-card/60 text-gray-300 hover:text-white hover:border-primary/50 transition-colors flex items-center gap-1 font-mono"
             title="สลับการแสดงผลตัวเลือก A-B-C-D และ ก-ข-ค-ง"
           >
-            <span>ตัวเลือก:</span>
+            <span>{t.room.choiceToggle}</span>
             <span className="font-bold text-primary-accent">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</span>
           </button>
         </div>
@@ -1119,25 +1121,25 @@ export default function RoomLobbyPage({
         <div className="flex items-center gap-2">
           {room.status === "ANSWERING" && (
             <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-primary/20 text-primary-accent border border-primary/30 uppercase tracking-wider">
-              1. Answer Phase
+              {t.room.phase1Badge}
             </span>
           )}
           {room.status === "DISCUSSION" && (
             <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider flex items-center gap-1.5">
               <DiscordIcon className="w-3.5 h-3.5 text-[#5865F2]" />
-              2. Discuss in Discord
+              {t.room.phase2Badge}
             </span>
           )}
           {room.status === "CHANGING" && (
             <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider flex items-center gap-1.5">
               <RefreshCw className="w-3.5 h-3.5" />
-              3. Change or Keep
+              {t.room.phase3Badge}
             </span>
           )}
           {room.status === "REVEAL" && (
             <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-success/20 text-success border border-success/30 uppercase tracking-wider flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5" />
-              4. Reveal & Learn
+              {t.room.phase4Badge}
             </span>
           )}
         </div>
@@ -1194,11 +1196,11 @@ export default function RoomLobbyPage({
                   <span className="font-semibold text-white">
                     {answeredCount} / {players.length}
                   </span>
-                  <span>players answered</span>
+                  <span>{t.room.playersAnswered}</span>
                   {isInitialLocked && (
                     <span className="inline-flex items-center gap-1 text-success font-medium ml-2">
                       <Lock className="w-3.5 h-3.5" />
-                      Answer locked
+                      {t.room.answerLocked}
                     </span>
                   )}
                 </div>
@@ -1213,11 +1215,11 @@ export default function RoomLobbyPage({
                     className="w-full sm:w-auto py-3 text-sm font-semibold"
                     leftIcon={<Lock className="w-4 h-4" />}
                   >
-                    Lock Answer
+                    {t.room.lockAnswerBtn}
                   </Button>
                 ) : (
                   <span className="text-xs text-gray-400 italic">
-                    Waiting for everyone to lock their answers...
+                    {t.room.waitingAllLock}
                   </span>
                 )}
               </div>
@@ -1234,17 +1236,17 @@ export default function RoomLobbyPage({
                   <DiscordIcon className="w-6 h-6" />
                 </div>
                 <h3 className="text-lg sm:text-xl font-bold text-white">
-                  Everyone has answered.
+                  {t.room.discussNoticeTitle}
                 </h3>
                 <p className="text-xs sm:text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
-                  Hop on your Discord call now to discuss why you chose your answer and debate the concepts together!
+                  {t.room.discussNoticeDesc}
                 </p>
               </div>
 
               {/* Ready Button for players */}
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-card-border/60">
                 <div className="text-xs text-gray-400">
-                  <strong className="text-white">{readyCount}</strong> / {players.length} players ready to revise
+                  <strong className="text-white">{readyCount}</strong> / {players.length} {t.room.playersReady}
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
@@ -1256,7 +1258,7 @@ export default function RoomLobbyPage({
                     className="w-full sm:w-auto"
                     leftIcon={isReady ? <Check className="w-4 h-4 text-success" /> : undefined}
                   >
-                    {isReady ? "I'm Ready ✓" : "I'm Ready"}
+                    {isReady ? t.room.readyBtnDone : t.room.readyBtn}
                   </Button>
 
                   {/* Host Proceed Action */}
@@ -1269,7 +1271,7 @@ export default function RoomLobbyPage({
                       className="w-full sm:w-auto shadow-glow"
                       rightIcon={<ArrowRight className="w-4 h-4" />}
                     >
-                      Proceed to Change
+                      {t.room.proceedChangeBtn}
                     </Button>
                   )}
                 </div>
@@ -1283,9 +1285,9 @@ export default function RoomLobbyPage({
           {room.status === "CHANGING" && (
             <div className="space-y-6">
               <div className="p-4 rounded-xl bg-card-border/20 border border-card-border flex items-center justify-between">
-                <span className="text-xs text-gray-400">Your initial answer was:</span>
+                <span className="text-xs text-gray-400">{t.room.initialWas}</span>
                 <span className="px-3 py-1 rounded-lg bg-primary/20 text-primary-accent font-bold font-mono text-sm border border-primary/30">
-                  Option {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : "N/A"}
+                  {t.room.optionWord} {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : "N/A"}
                 </span>
               </div>
 
@@ -1305,7 +1307,7 @@ export default function RoomLobbyPage({
                           : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-500"
                       }`}
                     >
-                      Keep Option {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : (useThaiChoices ? "ก" : "A")}
+                      {t.room.keepBtn} {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : (useThaiChoices ? "ก" : "A")}
                     </button>
 
                     <button
@@ -1317,7 +1319,7 @@ export default function RoomLobbyPage({
                           : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-500"
                       }`}
                     >
-                      Change Answer
+                      {t.room.changeBtn}
                     </button>
                   </div>
 
@@ -1325,7 +1327,7 @@ export default function RoomLobbyPage({
                   {changeMode === "change" && (
                     <div className="space-y-2 pt-2 animate-in fade-in duration-200">
                       <span className="text-xs text-gray-400 font-medium block">
-                        Select your revised answer:
+                        {t.room.selectRevised}
                       </span>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {choices.map((c) => {
@@ -1354,7 +1356,7 @@ export default function RoomLobbyPage({
                   {/* Final Lock action */}
                   <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div className="text-xs text-gray-400">
-                      {finalLockedCount} / {players.length} players final locked
+                      {t.room.hostRevealControl.replace("{locked}", String(finalLockedCount)).replace("{total}", String(players.length))}
                     </div>
                     <Button
                       variant="primary"
@@ -1365,7 +1367,7 @@ export default function RoomLobbyPage({
                       className="w-full sm:w-auto"
                       leftIcon={<Lock className="w-4 h-4" />}
                     >
-                      Final Lock
+                      {t.room.finalLockBtn}
                     </Button>
                   </div>
                 </div>
@@ -1373,10 +1375,10 @@ export default function RoomLobbyPage({
                 <div className="p-4 rounded-xl bg-success/10 border border-success/30 text-center space-y-2">
                   <div className="flex items-center justify-center gap-1.5 text-success font-semibold text-sm">
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Final Answer Locked</span>
+                    <span>{t.room.finalLockedNotice}</span>
                   </div>
                   <p className="text-xs text-gray-400">
-                    Waiting for host to reveal the answer ({finalLockedCount} / {players.length} locked).
+                    {t.room.waitingReveal.replace("{locked}", String(finalLockedCount)).replace("{total}", String(players.length))}
                   </p>
                 </div>
               )}
@@ -1385,7 +1387,7 @@ export default function RoomLobbyPage({
               {isHost && (
                 <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row items-center justify-between gap-3">
                   <span className="text-xs text-gray-400">
-                    Host Control: {finalLockedCount} / {players.length} players locked
+                    {t.room.hostRevealControl.replace("{locked}", String(finalLockedCount)).replace("{total}", String(players.length))}
                   </span>
                   <Button
                     variant="primary"
@@ -1395,7 +1397,7 @@ export default function RoomLobbyPage({
                     className="w-full sm:w-auto shadow-glow"
                     leftIcon={<Eye className="w-4 h-4" />}
                   >
-                    Reveal Answer
+                    {t.room.revealBtn}
                   </Button>
                 </div>
               )}
@@ -1412,14 +1414,14 @@ export default function RoomLobbyPage({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-success flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4" />
-                    Correct Answer
+                    {t.room.correctAnswer}
                   </span>
                   <span className="text-xs font-medium text-gray-300">
-                    {revealData.correctCount} / {revealData.totalPlayers} correct
+                    {revealData.correctCount} / {revealData.totalPlayers}
                   </span>
                 </div>
                 <div className="text-2xl font-black text-white font-mono">
-                  Option {formatChoiceLetter(revealData.correctAnswer, useThaiChoices)}
+                  {t.room.optionWord} {formatChoiceLetter(revealData.correctAnswer, useThaiChoices)}
                 </div>
               </div>
 
@@ -1427,7 +1429,7 @@ export default function RoomLobbyPage({
               {revealData.explanation && (
                 <div className="p-4 rounded-xl bg-card-border/20 border border-card-border space-y-1.5">
                   <span className="text-xs font-semibold text-primary-accent uppercase tracking-wider block">
-                    Explanation
+                    {t.room.explanation}
                   </span>
                   <p className="text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-line">
                     {revealData.explanation}
@@ -1438,7 +1440,7 @@ export default function RoomLobbyPage({
               {/* Trajectory Breakdown (Initial -> Final) */}
               <div className="space-y-2">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
-                  Player Answers (Initial → Final)
+                  {t.room.playerTrajectory}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {revealData.results.map((r) => (
@@ -1480,7 +1482,7 @@ export default function RoomLobbyPage({
                       className="w-full sm:w-auto shadow-glow"
                       leftIcon={<CheckCircle2 className="w-4 h-4" />}
                     >
-                      Back to Summary
+                      {t.room.backToSummaryBtn}
                     </Button>
                   ) : (
                     <Button
@@ -1491,7 +1493,7 @@ export default function RoomLobbyPage({
                       className="w-full sm:w-auto shadow-glow"
                       rightIcon={<ArrowRight className="w-4 h-4" />}
                     >
-                      {currentQIndex + 1 >= totalQuestions ? "Finish Mock" : "Next Question"}
+                      {currentQIndex + 1 >= totalQuestions ? t.room.finishMockBtn : t.room.nextQuestionBtn}
                     </Button>
                   )}
                 </div>

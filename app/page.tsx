@@ -1,11 +1,23 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import { ArrowRight, PlusCircle, LogIn, Disc as DiscordIcon, Zap } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function HomePage() {
-  const steps = [
+  const { t, language } = useLanguage();
+
+  const steps = language === "th" ? [
+    { label: "คิด", desc: "ทำโจทย์ด้วยตัวเอง" },
+    { label: "ล็อค", desc: "ล็อคคำตอบแรก" },
+    { label: "ถก", desc: "เปิดไมค์คุยใน Discord" },
+    { label: "เปลี่ยน", desc: "เปลี่ยนคำตอบที่มั่นใจ" },
+    { label: "เฉลย", desc: "เปิดเฉลยพร้อมคำอธิบาย" },
+    { label: "จำแม่น", desc: "ทบทวนข้อที่พลาด" },
+  ] : [
     { label: "Think", desc: "Solve questions independently" },
     { label: "Lock", desc: "Lock your initial answer" },
     { label: "Discuss", desc: "Debate choices in Discord" },
@@ -20,7 +32,7 @@ export default function HomePage() {
         {/* Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-xs text-primary-accent font-medium">
           <Zap className="w-3.5 h-3.5" />
-          <span>Pre-exam practice with friends</span>
+          <span>{language === "th" ? "ติวสอบร่วมกับเพื่อนก่อนสอบ" : "Pre-exam practice with friends"}</span>
         </div>
 
         {/* Hero Title & Subtitle */}
@@ -29,10 +41,10 @@ export default function HomePage() {
             Nécessaire
           </h1>
           <p className="text-lg sm:text-2xl font-medium text-primary-accent italic">
-            Think. Discuss. Remember.
+            {t.home.tagline}
           </p>
           <p className="text-sm sm:text-base text-gray-400 max-w-md mx-auto leading-relaxed">
-            A simple way to practice with friends before an exam. No accounts, no distractions.
+            {t.home.subtitle}
           </p>
         </div>
 
@@ -45,9 +57,9 @@ export default function HomePage() {
                 <div className="w-10 h-10 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center text-primary-accent mb-3 group-hover:bg-primary group-hover:text-white transition-colors">
                   <PlusCircle className="w-5 h-5" />
                 </div>
-                <CardTitle className="text-xl">Host a Mock Test</CardTitle>
+                <CardTitle className="text-xl">{t.home.hostBtn}</CardTitle>
                 <CardDescription>
-                  Start a room, prepare questions, and invite friends with a room code.
+                  {t.home.hostDesc}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -56,7 +68,7 @@ export default function HomePage() {
                   className="w-full mt-4 justify-between"
                   rightIcon={<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
                 >
-                  Create Room
+                  {language === "th" ? "สร้างห้องใหม่" : "Create Room"}
                 </Button>
               </CardContent>
             </Card>
@@ -69,9 +81,9 @@ export default function HomePage() {
                 <div className="w-10 h-10 rounded-lg bg-gray-800 border border-card-border flex items-center justify-center text-gray-300 mb-3 group-hover:bg-primary/20 group-hover:text-primary-accent group-hover:border-primary/40 transition-colors">
                   <LogIn className="w-5 h-5" />
                 </div>
-                <CardTitle className="text-xl">Join a Room</CardTitle>
+                <CardTitle className="text-xl">{t.home.joinBtn}</CardTitle>
                 <CardDescription>
-                  Enter a room code and nickname to test together with your study group.
+                  {t.home.joinDesc}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -80,7 +92,7 @@ export default function HomePage() {
                   className="w-full mt-4 justify-between group-hover:border-primary-accent/40"
                   rightIcon={<ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
                 >
-                  Enter Code
+                  {language === "th" ? "ใส่รหัสเข้าห้อง" : "Enter Code"}
                 </Button>
               </CardContent>
             </Card>
@@ -90,7 +102,7 @@ export default function HomePage() {
         {/* Minimal Study Loop & Discord reminder */}
         <div className="w-full pt-8 border-t border-card-border/50">
           <div className="flex items-center justify-center gap-2 text-xs text-gray-500 font-medium uppercase tracking-wider mb-4">
-            <span>The Learning Loop</span>
+            <span>{t.home.flowTitle}</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-center">
@@ -108,7 +120,7 @@ export default function HomePage() {
 
           <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-500">
             <DiscordIcon className="w-3.5 h-3.5 text-[#5865F2]" />
-            <span>Hop on a Discord call with your friends while testing</span>
+            <span>{language === "th" ? "เปิดห้องคุยเสียงใน Discord ระหว่างทำข้อสอบเพื่อประสิทธิภาพสูงสุด" : "Hop on a Discord call with your friends while testing"}</span>
           </div>
         </div>
       </div>

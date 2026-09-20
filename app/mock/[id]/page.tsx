@@ -25,6 +25,7 @@ import { useToast } from "@/components/ui/Toast";
 import { getMockById } from "@/lib/storage";
 import { createRoom } from "@/lib/room";
 import { formatChoiceLetter } from "@/lib/parser";
+import { useLanguage } from "@/context/LanguageContext";
 import { MockWithQuestions, ChoiceLetter } from "@/types";
 
 export default function MockDetailPage({
@@ -36,6 +37,7 @@ export default function MockDetailPage({
   const mockId = resolvedParams.id;
   const router = useRouter();
   const { success, error } = useToast();
+  const { t } = useLanguage();
 
   const [mock, setMock] = useState<MockWithQuestions | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,7 +105,7 @@ export default function MockDetailPage({
     return (
       <div className="flex-1 flex flex-col justify-center items-center py-24 space-y-4">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-        <p className="text-xs text-gray-400">Loading mock test...</p>
+        <p className="text-xs text-gray-400">{t.mock.loading}</p>
       </div>
     );
   }
@@ -113,14 +115,14 @@ export default function MockDetailPage({
       <div className="flex-1 flex flex-col justify-center items-center px-4 py-20">
         <Card className="max-w-md w-full text-center p-8 space-y-4">
           <HelpCircle className="w-10 h-10 text-gray-500 mx-auto" />
-          <h2 className="text-xl font-bold text-white">Mock Test Not Found</h2>
+          <h2 className="text-xl font-bold text-white">{t.mock.notFoundTitle}</h2>
           <p className="text-xs sm:text-sm text-gray-400">
-            This test could not be located in storage. It may have been cleared or created in another session.
+            {t.mock.notFoundDesc}
           </p>
           <div className="pt-2">
             <Link href="/create">
               <Button variant="primary" size="sm">
-                Create a New Mock
+                {t.mock.createNewMock}
               </Button>
             </Link>
           </div>
@@ -138,7 +140,7 @@ export default function MockDetailPage({
           className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to home</span>
+          <span>{t.mock.backHome}</span>
         </Link>
       </div>
 
@@ -148,7 +150,7 @@ export default function MockDetailPage({
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary-accent border border-primary/30">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Mock Test Ready
+              {t.mock.mockReady}
             </span>
             {mock.subject && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-card text-gray-300 border border-card-border">
@@ -163,7 +165,7 @@ export default function MockDetailPage({
           <div className="flex items-center gap-4 text-xs text-gray-400">
             <span className="flex items-center gap-1">
               <Layers className="w-3.5 h-3.5 text-gray-500" />
-              {mock.questions.length} Questions
+              {t.mock.questionsCount.replace("{count}", String(mock.questions.length))}
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 text-gray-500" />
@@ -186,7 +188,7 @@ export default function MockDetailPage({
               )
             }
           >
-            {showAnswers ? "Hide Answers" : "Show Answers"}
+            {showAnswers ? t.mock.hideAnswers : t.mock.showAnswers}
           </Button>
 
           {/* Toggle Thai / English Choices */}
@@ -197,7 +199,7 @@ export default function MockDetailPage({
             className="text-xs font-mono"
             title="สลับการแสดงผลตัวเลือก A-D และ ก-ง"
           >
-            ตัวเลือก: <strong className="text-primary-accent ml-1">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</strong>
+            {t.mock.choiceToggle} <strong className="text-primary-accent ml-1">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</strong>
           </Button>
 
           <Link href="/create">
@@ -206,7 +208,7 @@ export default function MockDetailPage({
               size="sm"
               leftIcon={<PlusCircle className="w-4 h-4" />}
             >
-              New Mock
+              {t.mock.newMockBtn}
             </Button>
           </Link>
 
@@ -218,7 +220,7 @@ export default function MockDetailPage({
             leftIcon={<Users className="w-4 h-4" />}
             rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
           >
-            Create Room
+            {t.mock.createRoomBtn}
           </Button>
         </div>
       </div>
@@ -241,12 +243,12 @@ export default function MockDetailPage({
                     #{q.questionNumber}
                   </span>
                   <CardTitle className="text-base text-gray-200 font-medium">
-                    Question {q.questionNumber}
+                    {t.mock.questionNumber.replace("{number}", String(q.questionNumber))}
                   </CardTitle>
                 </div>
                 {showAnswers && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-success/15 text-success border border-success/30">
-                    Answer: {formatChoiceLetter(q.correctAnswer, useThaiChoices)}
+                    {t.mock.answerLabel.replace("{answer}", formatChoiceLetter(q.correctAnswer, useThaiChoices))}
                   </span>
                 )}
               </CardHeader>
@@ -290,7 +292,7 @@ export default function MockDetailPage({
                 {showAnswers && q.explanation && (
                   <div className="mt-3 p-3.5 rounded-lg bg-card-border/20 border border-card-border text-xs sm:text-sm text-gray-300 space-y-1">
                     <span className="text-xs font-semibold text-primary-accent block uppercase tracking-wider">
-                      Explanation
+                      {t.mock.explanationLabel}
                     </span>
                     <p className="text-gray-300 whitespace-pre-line leading-relaxed">
                       {q.explanation}
@@ -307,13 +309,13 @@ export default function MockDetailPage({
       <Modal
         isOpen={isHostModalOpen}
         onClose={() => setIsHostModalOpen(false)}
-        title="Host a Mock Test Session"
-        description="Choose your host nickname to create a room code for your friends."
+        title={t.mock.createRoomModalTitle}
+        description={t.mock.createRoomModalDesc}
       >
         <form onSubmit={handleCreateRoomSubmit} className="space-y-4">
           <Input
-            label="Your Host Nickname *"
-            placeholder="e.g., Dome"
+            label={t.mock.hostNicknameLabel}
+            placeholder={t.mock.hostNicknamePlaceholder}
             value={hostNickname}
             onChange={(e) => {
               setHostNickname(e.target.value);
@@ -332,7 +334,7 @@ export default function MockDetailPage({
               size="sm"
               onClick={() => setIsHostModalOpen(false)}
             >
-              Cancel
+              {t.mock.cancel}
             </Button>
             <Button
               type="submit"
@@ -341,7 +343,7 @@ export default function MockDetailPage({
               isLoading={isCreatingRoom}
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
-              Create Room
+              {t.mock.startRoomBtn}
             </Button>
           </div>
         </form>
