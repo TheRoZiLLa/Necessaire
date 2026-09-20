@@ -1,0 +1,14 @@
+-- Nécessaire - Supabase Schema (Placeholder / Future Reference)
+--
+-- NOTE: In Phase 1, no database tables or migrations are executed.
+-- This file documents prospective schema definitions for Phase 2.
+--
+-- Rooms Table (Future)
+-- CREATE TABLE IF NOT EXISTS rooms (
+--   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+--   code VARCHAR(8) UNIQUE NOT NULL,
+--   title TEXT NOT NULL,
+--   subject TEXT,
+--   host_nickname TEXT NOT NULL,
+--   created_at TIMESTAMPTZ DEFAULT now()
+-- );
