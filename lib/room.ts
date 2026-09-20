@@ -155,7 +155,11 @@ export async function createRoom(
         hostPlayerId,
       };
     } catch (err: any) {
-      console.warn("Supabase room creation failed, using local storage:", err.message);
+      console.error("Supabase room creation failed:", err.message);
+      return {
+        success: false,
+        error: `Supabase database error: ${err.message}. Please ensure you ran supabase/schema.sql in your Supabase SQL Editor.`,
+      };
     }
   }
 

@@ -129,7 +129,11 @@ export async function saveMockWithQuestions(
 
       return { success: true, mockId };
     } catch (err: any) {
-      console.warn("Supabase save failed, falling back to localStorage:", err.message);
+      console.error("Supabase save failed:", err.message);
+      return {
+        success: false,
+        error: `Supabase database error: ${err.message}. Please ensure you ran supabase/schema.sql in your Supabase SQL Editor.`,
+      };
     }
   }
 

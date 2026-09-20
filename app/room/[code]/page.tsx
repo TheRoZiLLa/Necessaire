@@ -39,6 +39,7 @@ import {
 } from "@/lib/loop";
 import { calculateRoomSummary, startReviewMode, exitReviewMode } from "@/lib/summary";
 import { useRoomRealtime, broadcastRoomEvent, RoomEvent } from "@/lib/realtime";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import {
   Room,
   Player,
@@ -708,6 +709,11 @@ export default function RoomLobbyPage({
           <p className="text-xs sm:text-sm text-gray-400">
             Room <strong>{roomCode}</strong> does not exist or has already ended.
           </p>
+          {!isSupabaseConfigured() && (
+            <div className="text-left bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-200">
+              ⚠️ Note: This website build is running in local mode without Supabase. If this room was hosted from a different device, other devices cannot connect until Supabase credentials are configured in Vercel and redeployed.
+            </div>
+          )}
           <div className="pt-2">
             <Link href="/join">
               <Button variant="primary" size="sm">
@@ -743,6 +749,19 @@ export default function RoomLobbyPage({
             </span>
           </div>
         </div>
+
+        {/* Offline Warning if Supabase is missing */}
+        {!isSupabaseConfigured() && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-xs sm:text-sm text-amber-200 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-amber-300">Offline / Single-Device Mode</p>
+              <p className="text-amber-200/80 text-xs">
+                Supabase credentials were not detected in this build. Other devices cannot find this room. To allow friends to join, add <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in Vercel Environment Variables and click <strong>Redeploy</strong>.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Room Code Card */}
         <Card className="border-primary/40 shadow-glow overflow-visible relative">
