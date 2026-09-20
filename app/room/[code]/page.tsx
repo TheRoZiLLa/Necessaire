@@ -31,7 +31,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
-import { DiscussionTimer } from "@/components/ui/Timer";
 import { useToast } from "@/components/ui/Toast";
 import { getRoomDetails, startRoom, leaveRoom, kickPlayer } from "@/lib/room";
 import {
@@ -878,15 +877,13 @@ export default function RoomLobbyPage({
         )}
 
         {/* Room Code Card */}
-        <Card className="border-white/10 bg-canvas-surface/85 backdrop-blur-2xl shadow-glass overflow-hidden relative">
-          <div className="absolute -top-20 -right-20 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-gold/15 rounded-full blur-3xl pointer-events-none" />
-          <div className="p-6 sm:p-9 flex flex-col items-center text-center space-y-4 relative">
-            <div className="space-y-1.5">
-              <span className="text-[11px] text-gray-400 uppercase tracking-widest font-semibold font-mono">
+        <Card className="border-primary/40 shadow-glow overflow-visible relative">
+          <div className="p-6 sm:p-8 flex flex-col items-center text-center space-y-4">
+            <div className="space-y-1">
+              <span className="text-xs text-gray-400 uppercase tracking-widest font-semibold">
                 {t.room.roomCode}
               </span>
-              <div className="text-5xl sm:text-7xl font-black font-mono tracking-widest py-1 select-all text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-amber-200 drop-shadow-[0_0_25px_rgba(124,92,255,0.4)]">
+              <div className="text-4xl sm:text-6xl font-black text-white font-mono tracking-widest py-1 select-all">
                 {roomCode}
               </div>
             </div>
@@ -894,8 +891,8 @@ export default function RoomLobbyPage({
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-gray-300">
               <span className="font-semibold text-white">{mock.title}</span>
               {mock.subject && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-white/10 text-gray-300 border border-white/10">
-                  <BookOpen className="w-3 h-3 text-gold" />
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-card-border/60 text-gray-300">
+                  <BookOpen className="w-3 h-3 text-gray-400" />
                   {mock.subject}
                 </span>
               )}
@@ -938,8 +935,8 @@ export default function RoomLobbyPage({
         </Card>
 
         {/* Players List Card */}
-        <Card className="border-white/10 bg-canvas-surface/80 backdrop-blur-xl shadow-glass">
-          <CardHeader className="flex flex-row items-center justify-between py-4 px-4 sm:px-6 border-b border-white/10">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between py-4 px-4 sm:px-6">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-primary-accent" />
               <CardTitle className="text-base sm:text-lg">
@@ -958,18 +955,18 @@ export default function RoomLobbyPage({
                 return (
                   <div
                     key={p.id}
-                    className={`flex items-center justify-between p-3.5 rounded-xl border transition-all duration-300 ease-spring ${
+                    className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
                       p.isHost
-                        ? "bg-primary/[0.15] border-primary/40 text-white shadow-glow-violet"
-                        : "bg-white/[0.03] border-white/10 text-gray-200 hover:border-white/20 hover:bg-white/[0.06]"
+                        ? "bg-primary/[0.12] border-primary/40 text-white"
+                        : "bg-[#0F1117] border-card-border text-gray-200"
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-transform ${
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
                           p.isHost
-                            ? "bg-gradient-to-br from-primary to-violet text-white shadow-glow-sm"
-                            : "bg-white/10 text-gold"
+                            ? "bg-primary text-white"
+                            : "bg-card-border/60 text-gray-400"
                         }`}
                       >
                         {p.nickname.charAt(0).toUpperCase()}
@@ -978,7 +975,7 @@ export default function RoomLobbyPage({
                         <span className="text-sm font-medium block truncate">
                           {p.nickname}{" "}
                           {isMe && (
-                            <span className="text-xs text-cyan font-normal">
+                            <span className="text-xs text-primary-accent font-normal">
                               {t.room.youBadge}
                             </span>
                           )}
@@ -988,8 +985,8 @@ export default function RoomLobbyPage({
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       {p.isHost && (
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gold uppercase tracking-wider shrink-0 bg-gold/10 px-2 py-0.5 rounded-full border border-gold/30 shadow-glow-gold">
-                          <Crown className="w-3 h-3 text-amber-400" />
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 uppercase tracking-wider shrink-0 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30">
+                          <Crown className="w-3 h-3" />
                           {t.room.hostBadge}
                         </span>
                       )}
@@ -1018,7 +1015,7 @@ export default function RoomLobbyPage({
         </Card>
 
         {/* Action / Waiting Footer */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-canvas-surface/85 backdrop-blur-xl border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-glass">
+        <div className="p-4 sm:p-6 rounded-xl bg-card border border-card-border flex flex-col sm:flex-row items-center justify-between gap-4">
           {isHost ? (
             <>
               <div className="text-center sm:text-left">
@@ -1034,7 +1031,7 @@ export default function RoomLobbyPage({
                 size="lg"
                 onClick={handleStartMock}
                 isLoading={isStarting}
-                className="w-full sm:w-auto shadow-glow-violet py-3 px-6"
+                className="w-full sm:w-auto shadow-glow"
                 leftIcon={<Play className="w-5 h-5 fill-current" />}
               >
                 {t.room.startTestBtn}
@@ -1059,12 +1056,9 @@ export default function RoomLobbyPage({
   if (room.status === "FINISHED") {
     return (
       <div className="flex-1 max-w-2xl mx-auto w-full px-3 sm:px-6 py-8 sm:py-16 space-y-6 text-center pb-32 sm:pb-16">
-        <Card className="p-6 sm:p-10 space-y-6 border-white/10 bg-canvas-surface/85 backdrop-blur-2xl shadow-glass overflow-hidden relative">
-          <div className="absolute -top-24 -right-24 w-52 h-52 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-52 h-52 bg-gold/15 rounded-full blur-3xl pointer-events-none" />
-
+        <Card className="p-6 sm:p-10 space-y-6 border-card-border shadow-2xl">
           {/* Header */}
-          <div className="space-y-1 relative">
+          <div className="space-y-1">
             <span className="text-xs font-mono font-semibold tracking-widest text-primary-accent uppercase">
               Pre-Exam Drill
             </span>
@@ -1082,18 +1076,18 @@ export default function RoomLobbyPage({
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : summary ? (
-            <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-primary/15 via-violet/10 to-gold/10 border border-white/10 space-y-3 shadow-glass relative">
-              <div className="text-5xl sm:text-6xl font-black font-mono text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-amber-200 drop-shadow-[0_0_20px_rgba(124,92,255,0.4)]">
+            <div className="p-6 rounded-2xl bg-[#0F1117] border border-card-border space-y-3">
+              <div className="text-4xl sm:text-5xl font-black text-white font-mono">
                 {summary.playerScore.correct} / {summary.totalQuestions}
               </div>
 
               <div className="flex items-center justify-center gap-6 text-sm font-semibold pt-1">
-                <span className="text-emerald-400 flex items-center gap-1.5">
+                <span className="text-success flex items-center gap-1.5">
                   <CheckCircle2 className="w-4 h-4" />
                   {t.room.correctCount.replace("{count}", String(summary.playerScore.correct))}
                 </span>
                 <span className="text-gray-500">•</span>
-                <span className="text-rose-400 flex items-center gap-1.5">
+                <span className="text-error flex items-center gap-1.5">
                   <XCircle className="w-4 h-4" />
                   {t.room.wrongCount.replace("{count}", String(summary.playerScore.wrong))}
                 </span>
@@ -1103,10 +1097,10 @@ export default function RoomLobbyPage({
 
           {/* Needs Review Section */}
           {summary && (
-            <div className="space-y-4 text-left pt-3 border-t border-white/10">
+            <div className="space-y-4 text-left pt-2 border-t border-card-border/60">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-gold" />
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
                   {t.room.needsReviewTitle}
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5">
@@ -1119,21 +1113,21 @@ export default function RoomLobbyPage({
                   {summary.needsReviewQuestions.map((nr) => (
                     <div
                       key={nr.questionId}
-                      className="p-4 rounded-xl bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all duration-300 ease-spring flex items-center justify-between gap-4"
+                      className="p-3.5 rounded-xl bg-[#0F1117] border border-card-border flex items-center justify-between gap-4"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-gold/15 text-gold border border-gold/30 shrink-0">
+                          <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-amber-500/15 text-amber-400 border border-amber-500/30 shrink-0">
                             Q{nr.originalQuestionNumber}
                           </span>
-                          <span className="text-xs font-medium text-gray-300 truncate block">
+                          <span className="text-xs font-medium text-gray-400 truncate block">
                             {nr.questionText}
                           </span>
                         </div>
                       </div>
 
                       <div className="shrink-0 text-xs font-semibold text-gray-300 font-mono">
-                        <span className="text-gold font-bold">{nr.correctCount}</span> /{" "}
+                        <span className="text-amber-400 font-bold">{nr.correctCount}</span> /{" "}
                         {nr.totalPlayers} correct
                       </div>
                     </div>
@@ -1147,7 +1141,7 @@ export default function RoomLobbyPage({
                         size="md"
                         onClick={handleLaunchReview}
                         isLoading={isStartingReview}
-                        className="w-full shadow-glow-violet py-3"
+                        className="w-full shadow-glow py-3"
                         leftIcon={<RotateCcw className="w-4 h-4" />}
                       >
                         {t.room.reviewTheseBtn} ({summary.needsReviewQuestions.length})
@@ -1160,7 +1154,7 @@ export default function RoomLobbyPage({
                   </div>
                 </div>
               ) : (
-                <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center text-xs text-emerald-400 font-medium">
+                <div className="p-4 rounded-xl bg-success/10 border border-success/30 text-center text-xs text-success font-medium">
                   ✓ {t.room.perfectRun}
                 </div>
               )}
@@ -1168,7 +1162,7 @@ export default function RoomLobbyPage({
           )}
 
           {/* Quick Exit Links */}
-          <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row justify-center gap-3">
+          <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row justify-center gap-3">
             <Link href={`/mock/${mock.id}`} className="w-full sm:w-auto">
               <Button variant="outline" size="sm" className="w-full">
                 {t.room.reviewFullKey}
@@ -1234,21 +1228,21 @@ export default function RoomLobbyPage({
           <button
             type="button"
             onClick={() => setUseThaiChoices(!useThaiChoices)}
-            className="text-[11px] px-2 py-0.5 rounded-lg border border-white/10 bg-white/[0.04] text-gray-300 hover:text-white hover:border-primary/50 transition-colors flex items-center gap-1 font-mono"
+            className="text-[11px] px-2 py-0.5 rounded-lg border border-card-border bg-card text-gray-300 hover:text-white hover:border-primary transition-colors flex items-center gap-1 font-mono"
             title="สลับการแสดงผลตัวเลือก A-B-C-D และ ก-ข-ค-ง"
           >
             <span>{t.room.choiceToggle}</span>
-            <span className="font-bold text-gold">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</span>
+            <span className="font-bold text-primary-accent">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</span>
           </button>
 
           {/* Players count button */}
           <button
             type="button"
             onClick={() => setShowPlayersModal(true)}
-            className="text-[11px] px-2.5 py-0.5 rounded-lg border border-white/10 bg-white/[0.04] text-gray-300 hover:text-white hover:border-cyan/50 transition-colors flex items-center gap-1.5 font-mono"
+            className="text-[11px] px-2.5 py-0.5 rounded-lg border border-card-border bg-card text-gray-300 hover:text-white hover:border-primary-accent/50 transition-colors flex items-center gap-1.5 font-mono"
             title="ดูผู้เล่นในห้อง"
           >
-            <Users className="w-3.5 h-3.5 text-cyan" />
+            <Users className="w-3.5 h-3.5 text-primary-accent" />
             <span>{players.length}</span>
           </button>
         </div>
@@ -1256,18 +1250,18 @@ export default function RoomLobbyPage({
         {/* Phase Pill */}
         <div className="flex items-center gap-2">
           {room.status === "ANSWERING" && (
-            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-primary/20 text-primary-accent border border-primary/30 uppercase tracking-wider shadow-glow-violet">
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-primary/20 text-primary-accent border border-primary/30 uppercase tracking-wider">
               {t.room.phase1Badge}
             </span>
           )}
           {(room.status === "DISCUSSION" || room.status === "CHANGING") && (
-            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider flex items-center gap-1.5 shadow-glow-gold">
-              <Sparkles className="w-3.5 h-3.5 text-gold animate-pulse" />
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               {t.room.phaseDiscussChangeBadge || t.room.phase2Badge}
             </span>
           )}
           {room.status === "REVEAL" && (
-            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-success/20 text-success border border-success/30 uppercase tracking-wider flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5" />
               {t.room.phase4Badge}
             </span>
@@ -1277,11 +1271,11 @@ export default function RoomLobbyPage({
 
       {/* Active Game Players Modal */}
       {showPlayersModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-canvas-surface/95 border border-white/15 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-glass backdrop-blur-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-card border border-card-border rounded-xl max-w-md w-full p-5 space-y-4 shadow-xl">
+            <div className="flex items-center justify-between border-b border-card-border pb-3">
               <div className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-cyan" />
+                <Users className="w-5 h-5 text-primary-accent" />
                 <h3 className="text-base font-bold text-white">
                   {t.room.playersJoined} ({players.length})
                 </h3>
@@ -1289,7 +1283,7 @@ export default function RoomLobbyPage({
               <button
                 type="button"
                 onClick={() => setShowPlayersModal(false)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-card-hover transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1301,26 +1295,26 @@ export default function RoomLobbyPage({
                 return (
                   <div
                     key={p.id}
-                    className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between text-sm"
+                    className="p-3 rounded-lg bg-[#0F1117] border border-card-border flex items-center justify-between text-sm"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
                           p.isHost
                             ? "bg-primary text-white"
-                            : "bg-white/10 text-gold"
+                            : "bg-card-border/60 text-gray-400"
                         }`}
                       >
                         {p.nickname.charAt(0).toUpperCase()}
                       </div>
                       <span className="truncate font-medium text-white">
-                        {p.nickname} {isMe && <span className="text-xs text-cyan">({t.room.youBadge})</span>}
+                        {p.nickname} {isMe && <span className="text-xs text-primary-accent">({t.room.youBadge})</span>}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
                       {p.isHost && (
-                        <span className="text-[10px] font-bold text-gold uppercase px-2 py-0.5 rounded-full bg-gold/15 border border-gold/30">
+                        <span className="text-[10px] font-bold text-amber-400 uppercase px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30">
                           {t.room.hostBadge}
                         </span>
                       )}
@@ -1345,7 +1339,7 @@ export default function RoomLobbyPage({
               })}
             </div>
 
-            <div className="pt-2 border-t border-white/10 flex justify-end">
+            <div className="pt-2 border-t border-card-border flex justify-end">
               <Button
                 variant="secondary"
                 size="sm"
@@ -1359,24 +1353,20 @@ export default function RoomLobbyPage({
       )}
 
       {/* Main Question Card */}
-      <Card className="border-white/10 bg-canvas-surface/85 backdrop-blur-2xl shadow-glass overflow-hidden relative">
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-        <CardHeader className="bg-canvas-elevated/40 border-b border-white/10 py-5 px-5 sm:px-8">
-          <span className="text-[11px] font-mono uppercase tracking-widest text-primary-accent font-semibold block mb-1">
-            Question {(isReviewMode ? "Review " : "") + (currentQIndex + 1)}
-          </span>
-          <CardTitle className="text-lg sm:text-2xl text-white font-medium leading-relaxed whitespace-pre-line tracking-tight">
+      <Card className="border-card-border shadow-xl">
+        <CardHeader className="bg-card-border/20 py-4 px-4 sm:px-6">
+          <CardTitle className="text-base sm:text-xl text-white font-medium leading-relaxed whitespace-pre-line">
             {currentQuestion.questionText}
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="p-5 sm:p-8 space-y-6">
+        <CardContent className="p-4 sm:p-6 space-y-6">
           {/* =======================================================
               PHASE 1: ANSWERING
               ======================================================= */}
           {room.status === "ANSWERING" && (
-            <div className="space-y-5">
-              <div className="space-y-3">
+            <div className="space-y-4">
+              <div className="space-y-2.5">
                 {choices.map((c) => {
                   const isSelected = selectedInitialChoice === c.letter;
 
@@ -1386,29 +1376,29 @@ export default function RoomLobbyPage({
                       type="button"
                       disabled={isInitialLocked || isSubmittingInitial}
                       onClick={() => setSelectedInitialChoice(c.letter)}
-                      className={`w-full text-left p-4 sm:p-4.5 rounded-2xl border flex items-start gap-4 transition-all duration-300 ease-spring select-none min-h-[64px] active:scale-[0.99] ${
+                      className={`w-full text-left p-3.5 sm:p-4 rounded-xl border flex items-start gap-3.5 transition-all select-none min-h-[58px] sm:min-h-[64px] active:scale-[0.99] ${
                         isSelected
-                          ? "border-primary bg-primary/20 text-white shadow-glow-violet translate-x-1"
-                          : "border-white/10 bg-white/[0.03] text-gray-300 hover:border-primary/40 hover:bg-white/[0.06] hover:-translate-y-0.5"
+                          ? "border-primary bg-primary/15 text-white shadow-glow-sm"
+                          : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-600 hover:bg-card/50"
                       } ${isInitialLocked ? "cursor-not-allowed opacity-80" : "cursor-pointer"}`}
                     >
                       <span
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 transition-all duration-300 ease-spring ${
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 transition-colors ${
                           isSelected
-                            ? "bg-gradient-to-br from-primary to-violet text-white shadow-glow-sm scale-105"
-                            : "bg-white/10 text-gray-400"
+                            ? "bg-primary text-white"
+                            : "bg-card-border/60 text-gray-400"
                         }`}
                       >
                         {formatChoiceLetter(c.letter, useThaiChoices)}
                       </span>
-                      <span className="text-sm sm:text-base pt-1.5 leading-snug">{c.text}</span>
+                      <span className="text-sm sm:text-base pt-1 leading-snug">{c.text}</span>
                     </button>
                   );
                 })}
               </div>
 
               {/* Progress & Lock Button */}
-              <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="pt-4 border-t border-card-border/50 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-xs text-gray-400 flex items-center gap-2">
                   <span className="font-semibold text-white">
                     {answeredCount} / {players.length}
@@ -1429,7 +1419,7 @@ export default function RoomLobbyPage({
                     disabled={!selectedInitialChoice}
                     isLoading={isSubmittingInitial}
                     onClick={handleLockInitialAnswer}
-                    className="w-full sm:w-auto py-3 px-6 text-sm font-semibold shadow-glow-violet"
+                    className="w-full sm:w-auto py-3 text-sm font-semibold shadow-glow"
                     leftIcon={<Lock className="w-4 h-4" />}
                   >
                     {t.room.lockAnswer1stBtn || t.room.lockAnswerBtn}
@@ -1450,33 +1440,26 @@ export default function RoomLobbyPage({
               ======================================================= */}
           {(room.status === "DISCUSSION" || room.status === "CHANGING") && (
             <div className="space-y-6">
-              {/* Discord Voice chat banner with Timer */}
-              <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#5865F2]/15 via-primary/10 to-violet/15 border border-[#5865F2]/30 flex flex-col md:flex-row items-center justify-between gap-5 text-center md:text-left relative overflow-hidden backdrop-blur-xl shadow-glass">
-                <div className="flex flex-col sm:flex-row items-center gap-4 flex-1">
-                  <div className="w-12 h-12 rounded-2xl bg-[#5865F2]/20 text-[#5865F2] flex items-center justify-center shrink-0 shadow-[0_0_24px_rgba(88,101,242,0.4)] border border-[#5865F2]/30">
-                    <DiscordIcon className="w-6 h-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-base sm:text-lg font-bold text-white flex items-center justify-center sm:justify-start gap-2">
-                      <span>{t.room.discussNoticeTitle}</span>
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    </h3>
-                    <p className="text-xs sm:text-sm text-gray-300 leading-relaxed max-w-md">
-                      {t.room.round1AnswersDesc || t.room.discussNoticeDesc}
-                    </p>
-                  </div>
+              {/* Discord Voice chat banner */}
+              <div className="p-4 sm:p-5 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                <div className="w-11 h-11 rounded-xl bg-[#5865F2]/20 text-[#5865F2] flex items-center justify-center shrink-0">
+                  <DiscordIcon className="w-6 h-6" />
                 </div>
-
-                <div className="shrink-0 flex items-center justify-center pt-2 md:pt-0 border-t md:border-t-0 md:border-l border-white/10 md:pl-5">
-                  <DiscussionTimer initialSeconds={90} />
+                <div className="space-y-1 flex-1">
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center justify-center sm:justify-start gap-2">
+                    <span>{t.room.discussNoticeTitle}</span>
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                    {t.room.round1AnswersDesc || t.room.discussNoticeDesc}
+                  </p>
                 </div>
               </div>
 
               {/* 1. Who answered what in Round 1 */}
-              <div className="p-5 sm:p-6 rounded-2xl bg-canvas-surface/85 backdrop-blur-xl border border-white/10 space-y-4 shadow-glass">
+              <div className="p-5 sm:p-6 rounded-xl bg-card border border-card-border space-y-4 shadow-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-gold animate-pulse" />
+                    <Sparkles className="w-4 h-4 text-amber-400" />
                     <h4 className="text-sm sm:text-base font-bold text-white">
                       {t.room.round1AnswersTitle}
                     </h4>
@@ -1495,7 +1478,7 @@ export default function RoomLobbyPage({
                     <span className="text-xs font-semibold text-gray-400 block">
                       {t.room.tallyLabel}
                     </span>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {choices.map((c) => {
                         const count = round1Answers.filter((a) => a.initialAnswer === c.letter).length;
                         const pct = round1Answers.length > 0 ? Math.round((count / round1Answers.length) * 100) : 0;
@@ -1504,30 +1487,30 @@ export default function RoomLobbyPage({
                         return (
                           <div
                             key={c.letter}
-                            className={`p-3 rounded-xl border flex flex-col justify-between transition-all duration-300 ease-spring ${
+                            className={`p-2.5 rounded-xl border flex flex-col justify-between transition-all ${
                               isMyPick
-                                ? "bg-primary/20 border-primary/50 shadow-glow-violet"
-                                : "bg-white/[0.03] border-white/5"
+                                ? "bg-primary/15 border-primary/40 shadow-glow-sm"
+                                : "bg-[#0F1117] border-card-border"
                             }`}
                           >
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-sm text-gold font-mono">
+                              <span className="font-bold text-sm text-amber-400 font-mono">
                                 {t.room.optionWord} {formatChoiceLetter(c.letter, useThaiChoices)}
                               </span>
                               {isMyPick && (
-                                <span className="text-[10px] text-cyan font-bold uppercase tracking-wider">
+                                <span className="text-[10px] text-primary-accent font-bold uppercase">
                                   {t.room.youBadge}
                                 </span>
                               )}
                             </div>
-                            <div className="mt-2 flex items-baseline justify-between">
-                              <span className="text-xl font-black text-white font-mono">{count}</span>
+                            <div className="mt-1 flex items-baseline justify-between">
+                              <span className="text-lg font-black text-white font-mono">{count}</span>
                               <span className="text-xs text-gray-400 font-mono">{pct}%</span>
                             </div>
-                            <div className="w-full bg-white/10 h-1.5 rounded-full mt-2 overflow-hidden">
+                            <div className="w-full bg-card-border/60 h-1.5 rounded-full mt-1.5 overflow-hidden">
                               <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  isMyPick ? "bg-gradient-to-r from-primary to-violet" : "bg-gold"
+                                className={`h-full rounded-full transition-all duration-300 ${
+                                  isMyPick ? "bg-primary" : "bg-amber-400"
                                 }`}
                                 style={{ width: `${pct}%` }}
                               />
@@ -1540,7 +1523,7 @@ export default function RoomLobbyPage({
                 )}
 
                 {/* Players Choice Badges */}
-                <div className="space-y-2 pt-3 border-t border-white/10">
+                <div className="space-y-2 pt-2 border-t border-card-border/60">
                   <span className="text-xs font-semibold text-gray-400 block">
                     {t.room.whoAnsweredWhat} ({round1Answers.length})
                   </span>
@@ -1552,21 +1535,21 @@ export default function RoomLobbyPage({
                           key={item.playerId}
                           className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition-all ${
                             isMe
-                              ? "bg-primary/15 border-primary/40 text-white shadow-glow-violet"
-                              : "bg-white/[0.04] border-white/10 text-gray-200"
+                              ? "bg-primary/15 border-primary/40 text-white shadow-glow-sm"
+                              : "bg-[#0F1117] border-card-border text-gray-200"
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-6 h-6 rounded-lg bg-white/10 text-gold flex items-center justify-center font-bold text-[11px] shrink-0">
+                            <div className="w-6 h-6 rounded-lg bg-card-border/60 text-amber-400 flex items-center justify-center font-bold text-[11px] shrink-0">
                               {item.nickname.charAt(0).toUpperCase()}
                             </div>
                             <span className="truncate font-medium">
-                              {item.nickname} {isMe && <span className="text-cyan font-normal">{t.room.youBadge}</span>}
+                              {item.nickname} {isMe && <span className="text-primary-accent font-normal">{t.room.youBadge}</span>}
                             </span>
                           </div>
 
                           {item.initialAnswer ? (
-                            <span className="px-2.5 py-0.5 rounded-lg bg-gold/15 text-gold font-bold font-mono border border-gold/30 shrink-0 shadow-glow-gold">
+                            <span className="px-2.5 py-0.5 rounded-lg bg-amber-500/15 text-amber-400 font-bold font-mono border border-amber-500/30 shrink-0">
                               {t.room.optionWord} {formatChoiceLetter(item.initialAnswer, useThaiChoices)}
                             </span>
                           ) : (
@@ -1582,55 +1565,23 @@ export default function RoomLobbyPage({
               </div>
 
               {/* 2. Direct Change / Confirm Answer Card */}
-              <div className="p-5 sm:p-6 rounded-2xl bg-canvas-surface/85 backdrop-blur-xl border border-white/10 space-y-5 shadow-glass">
-                {/* Visual Trajectory Display */}
-                <div className="p-4 rounded-xl bg-canvas-elevated/70 border border-white/10 flex flex-col sm:flex-row items-center justify-around gap-4 text-center">
-                  <div className="space-y-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block">
-                      {t.room.initialWas.replace(":", "")}
-                    </span>
-                    <span className="inline-flex items-center justify-center px-4 py-1.5 rounded-xl font-mono text-xl font-bold bg-white/10 text-gold border border-gold/30 shadow-glow-gold">
-                      {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : "-"}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col items-center justify-center text-primary-accent">
-                    <ArrowRight className="w-5 h-5 hidden sm:block animate-pulse" />
-                    <span className="text-[10px] uppercase font-mono tracking-widest text-primary-accent sm:mt-1">
-                      {isFinalLocked ? "LOCKED IN" : "CHANGE?"}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block">
-                      {t.room.finalLockedNotice}
-                    </span>
-                    <span className={`inline-flex items-center justify-center px-4 py-1.5 rounded-xl font-mono text-xl font-bold border transition-all duration-300 ${
-                      isFinalLocked
-                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
-                        : "bg-primary/20 text-primary-accent border-primary/40 shadow-glow-violet"
-                    }`}>
-                      {formatChoiceLetter(selectedFinalChoice || selectedInitialChoice || "A", useThaiChoices)}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/10">
+              <div className="p-5 sm:p-6 rounded-xl bg-card border border-card-border space-y-4 shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-card-border/60">
                   <div className="space-y-0.5">
                     <h4 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4 text-cyan" />
+                      <RefreshCw className="w-4 h-4 text-primary-accent" />
                       <span>{t.room.changeDirectHelp}</span>
                     </h4>
                     <p className="text-xs text-gray-400">
                       {t.room.initialWas}{" "}
-                      <strong className="text-gold font-mono">
+                      <strong className="text-amber-400 font-mono">
                         {t.room.optionWord} {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : "-"}
                       </strong>
                     </p>
                   </div>
 
                   {isFinalLocked && (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/15 px-3 py-1 rounded-full border border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-success bg-success/15 px-3 py-1 rounded-full border border-success/30">
                       <CheckCircle2 className="w-4 h-4" />
                       {t.room.answer2ndLocked}
                     </span>
@@ -1651,18 +1602,18 @@ export default function RoomLobbyPage({
                             key={c.letter}
                             type="button"
                             onClick={() => setSelectedFinalChoice(c.letter)}
-                            className={`w-full text-left p-4 rounded-xl border flex items-start justify-between gap-3 transition-all select-none active:scale-[0.99] duration-300 ease-spring ${
+                            className={`w-full text-left p-3.5 rounded-xl border flex items-start justify-between gap-3 transition-all select-none active:scale-[0.99] ${
                               isSelected
-                                ? "border-primary bg-primary/20 text-white shadow-glow-violet translate-x-1"
-                                : "border-white/10 bg-white/[0.03] text-gray-300 hover:border-white/20 hover:bg-white/[0.06] hover:-translate-y-0.5"
+                                ? "border-primary bg-primary/15 text-white shadow-glow-sm"
+                                : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-600 hover:bg-card/50"
                             }`}
                           >
-                            <div className="flex items-start gap-3.5 min-w-0">
+                            <div className="flex items-start gap-3 min-w-0">
                               <span
                                 className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 transition-colors ${
                                   isSelected
-                                    ? "bg-gradient-to-br from-primary to-violet text-white shadow-glow-sm"
-                                    : "bg-white/10 text-gray-400"
+                                    ? "bg-primary text-white"
+                                    : "bg-card-border/60 text-gray-400"
                                 }`}
                               >
                                 {formatChoiceLetter(c.letter, useThaiChoices)}
@@ -1672,12 +1623,12 @@ export default function RoomLobbyPage({
 
                             <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
                               {isOriginal && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-md bg-white/10 text-gray-400 border border-white/10 font-mono">
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-card-border/60 text-gray-400 border border-card-border">
                                   {t.room.initialWas.replace(":", "")}
                                 </span>
                               )}
                               {isSelected && (
-                                <CheckCircle2 className="w-5 h-5 text-primary-accent animate-in zoom-in duration-200" />
+                                <CheckCircle2 className="w-5 h-5 text-primary-accent" />
                               )}
                             </div>
                           </button>
@@ -1686,7 +1637,7 @@ export default function RoomLobbyPage({
                     </div>
 
                     {/* Lock 2nd Button & Counter */}
-                    <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="pt-3 border-t border-card-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="text-xs text-gray-400 flex items-center gap-2">
                         <span className="font-semibold text-white">{finalLockedCount} / {players.length}</span>
                         <span>{t.room.playersAnswered}</span>
@@ -1698,7 +1649,7 @@ export default function RoomLobbyPage({
                         disabled={!selectedFinalChoice && !selectedInitialChoice}
                         isLoading={isSubmittingFinal}
                         onClick={handleFinalLock}
-                        className="w-full sm:w-auto py-3 px-6 shadow-glow-violet font-semibold"
+                        className="w-full sm:w-auto py-3 shadow-glow font-semibold"
                         leftIcon={<Lock className="w-4 h-4" />}
                       >
                         {t.room.lockAnswer2ndBtn}
@@ -1706,8 +1657,8 @@ export default function RoomLobbyPage({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-center space-y-1.5">
-                    <div className="flex items-center justify-center gap-1.5 text-emerald-400 font-semibold text-sm">
+                  <div className="p-4 rounded-xl bg-success/10 border border-success/30 text-center space-y-1.5">
+                    <div className="flex items-center justify-center gap-1.5 text-success font-semibold text-sm">
                       <CheckCircle2 className="w-4 h-4" />
                       <span>{t.room.finalLockedNotice}</span>
                     </div>
@@ -1726,15 +1677,15 @@ export default function RoomLobbyPage({
 
               {/* 3. Host Instant Reveal Control */}
               {isHost && (
-                <div className="p-5 rounded-2xl bg-gradient-to-r from-gold/15 via-primary/15 to-violet/15 border border-gold/40 shadow-glow-gold flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-xl">
+                <div className="p-5 rounded-xl bg-gradient-to-r from-amber-500/10 via-primary/10 to-card border border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="space-y-1 text-center sm:text-left">
                     <div className="flex items-center justify-center sm:justify-start gap-2">
-                      <Crown className="w-4 h-4 text-gold" />
+                      <Crown className="w-4 h-4 text-amber-400" />
                       <span className="text-sm font-bold text-white">
                         {t.room.hostRevealInstant}
                       </span>
                     </div>
-                    <p className="text-xs text-gold/90 font-mono">
+                    <p className="text-xs text-amber-300/90 font-mono">
                       {t.room.hostRevealLiveCount.replace("{locked}", String(finalLockedCount)).replace("{total}", String(players.length))}
                     </p>
                   </div>
@@ -1744,7 +1695,7 @@ export default function RoomLobbyPage({
                     size="lg"
                     onClick={handleRevealAnswer}
                     isLoading={isRevealing}
-                    className="w-full sm:w-auto shadow-glow-gold py-3 px-6 text-sm font-bold"
+                    className="w-full sm:w-auto py-3 px-6 text-sm font-bold shadow-sm"
                     leftIcon={<Eye className="w-5 h-5" />}
                   >
                     {t.room.revealBtn}
@@ -1760,31 +1711,25 @@ export default function RoomLobbyPage({
           {room.status === "REVEAL" && revealData && (
             <div className="space-y-6">
               {/* Correct Answer Highlight */}
-              <div className="p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border border-emerald-500/30 space-y-3 shadow-[0_0_30px_rgba(16,185,129,0.15)] backdrop-blur-xl relative overflow-hidden">
+              <div className="p-5 rounded-xl bg-success/10 border border-success/40 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-success flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4" />
                     {t.room.correctAnswer}
                   </span>
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    {revealData.correctCount} / {revealData.totalPlayers} correct
+                  <span className="text-xs font-medium text-gray-300">
+                    {revealData.correctCount} / {revealData.totalPlayers}
                   </span>
                 </div>
-                <div className="flex items-center gap-3.5 pt-1">
-                  <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold font-mono text-xl shrink-0 shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-                    {formatChoiceLetter(revealData.correctAnswer, useThaiChoices)}
-                  </span>
-                  <span className="text-base sm:text-lg font-medium text-white leading-snug">
-                    {choices.find((c) => c.letter === revealData.correctAnswer)?.text}
-                  </span>
+                <div className="text-2xl font-black text-white font-mono">
+                  {t.room.optionWord} {formatChoiceLetter(revealData.correctAnswer, useThaiChoices)}
                 </div>
               </div>
 
               {/* Explanation Card */}
               {revealData.explanation && (
-                <div className="p-5 sm:p-6 rounded-2xl bg-canvas-surface/85 backdrop-blur-xl border border-white/10 space-y-2 shadow-glass">
-                  <span className="text-xs font-bold text-gold uppercase tracking-wider flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-gold animate-pulse" />
+                <div className="p-5 rounded-xl bg-card border border-card-border space-y-2">
+                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider block">
                     {t.room.explanation}
                   </span>
                   <p className="text-xs sm:text-sm text-gray-200 leading-relaxed whitespace-pre-line">
@@ -1794,60 +1739,50 @@ export default function RoomLobbyPage({
               )}
 
               {/* Trajectory Breakdown (Initial -> Final) */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block">
                   {t.room.playerTrajectory}
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {revealData.results.map((r) => {
-                    const changedToCorrect = !r.initialAnswer || (r.initialAnswer !== revealData.correctAnswer && r.finalAnswer === revealData.correctAnswer);
-                    return (
-                      <div
-                        key={r.playerId}
-                        className={`p-3.5 rounded-xl border flex items-center justify-between text-xs sm:text-sm transition-all duration-300 ease-spring ${
-                          r.isCorrect
-                            ? "bg-emerald-500/10 border-emerald-500/30 text-white shadow-[0_0_15px_rgba(16,185,129,0.1)]"
-                            : "bg-white/[0.03] border-white/10 text-gray-300"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-medium truncate max-w-[120px]">
-                            {r.nickname}
-                          </span>
-                          {changedToCorrect && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold/15 text-gold border border-gold/30 font-semibold shrink-0">
-                              Changed & Correct!
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 font-mono font-semibold shrink-0">
-                          <span className="text-gray-400">{r.initialAnswer ? formatChoiceLetter(r.initialAnswer, useThaiChoices) : "-"}</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-gray-500" />
-                          <span className={r.isCorrect ? "text-emerald-400 font-bold" : "text-gray-400"}>
-                            {r.finalAnswer ? formatChoiceLetter(r.finalAnswer, useThaiChoices) : "-"}
-                          </span>
-                          {r.isCorrect ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          ) : (
-                            <XCircle className="w-4 h-4 text-gray-500" />
-                          )}
-                        </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {revealData.results.map((r) => (
+                    <div
+                      key={r.playerId}
+                      className={`p-3 rounded-xl border flex items-center justify-between text-xs sm:text-sm transition-all ${
+                        r.isCorrect
+                          ? "bg-success/[0.08] border-success/30 text-white"
+                          : "bg-error/[0.08] border-error/30 text-gray-300"
+                      }`}
+                    >
+                      <span className="font-medium truncate max-w-[120px]">
+                        {r.nickname}
+                      </span>
+                      <div className="flex items-center gap-2 font-mono font-semibold">
+                        <span>{r.initialAnswer ? formatChoiceLetter(r.initialAnswer, useThaiChoices) : "-"}</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-gray-500" />
+                        <span className={r.isCorrect ? "text-success font-bold" : "text-error"}>
+                          {r.finalAnswer ? formatChoiceLetter(r.finalAnswer, useThaiChoices) : "-"}
+                        </span>
+                        {r.isCorrect ? (
+                          <CheckCircle2 className="w-4 h-4 text-success" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-error" />
+                        )}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
 
               {/* Host Advance Action (Next Question or Back to Summary if Review Mode) */}
               {isHost && (
-                <div className="pt-4 border-t border-white/10 flex items-center justify-end gap-3">
+                <div className="pt-4 border-t border-card-border/60 flex items-center justify-end gap-3">
                   {isReviewMode && currentQIndex + 1 >= totalQuestions ? (
                     <Button
                       variant="primary"
                       size="lg"
                       onClick={handleBackToSummary}
                       isLoading={isExitingReview}
-                      className="w-full sm:w-auto shadow-glow-violet py-3 px-6"
+                      className="w-full sm:w-auto shadow-glow"
                       leftIcon={<CheckCircle2 className="w-4 h-4" />}
                     >
                       {t.room.backToSummaryBtn}
@@ -1858,7 +1793,7 @@ export default function RoomLobbyPage({
                       size="lg"
                       onClick={handleNextQuestion}
                       isLoading={isAdvancing}
-                      className="w-full sm:w-auto shadow-glow-violet py-3 px-6"
+                      className="w-full sm:w-auto shadow-glow"
                       rightIcon={<ArrowRight className="w-4 h-4" />}
                     >
                       {currentQIndex + 1 >= totalQuestions ? t.room.finishMockBtn : t.room.nextQuestionBtn}

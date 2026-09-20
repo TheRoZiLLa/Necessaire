@@ -237,9 +237,9 @@ export default function MockDetailPage({
 
           return (
             <Card key={q.id}>
-              <CardHeader className="py-3 px-4 sm:px-6 bg-white/[0.03] border-b border-white/10 flex flex-row items-center justify-between">
+              <CardHeader className="py-3 px-4 sm:px-6 bg-card-border/10 flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-md bg-white/10 font-mono text-xs font-bold flex items-center justify-center text-gold border border-gold/20">
+                  <span className="w-7 h-7 rounded-md bg-card-border/60 font-mono text-xs font-bold flex items-center justify-center text-gray-200">
                     #{q.questionNumber}
                   </span>
                   <CardTitle className="text-base text-gray-200 font-medium">
@@ -247,7 +247,7 @@ export default function MockDetailPage({
                   </CardTitle>
                 </div>
                 {showAnswers && (
-                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-success/15 text-success border border-success/30">
                     {t.mock.answerLabel.replace("{answer}", formatChoiceLetter(q.correctAnswer, useThaiChoices))}
                   </span>
                 )}
@@ -267,17 +267,17 @@ export default function MockDetailPage({
                     return (
                       <div
                         key={c.key}
-                        className={`flex items-start gap-3 p-3 rounded-xl border transition-all text-xs sm:text-sm ${
+                        className={`flex items-start gap-3 p-3 rounded-lg border transition-all text-xs sm:text-sm ${
                           isCorrect
-                            ? "bg-emerald-500/10 border-emerald-500/40 text-white font-medium shadow-[0_0_15px_rgba(16,185,129,0.15)]"
-                            : "bg-white/[0.03] border-white/10 text-gray-300"
+                            ? "bg-success/10 border-success/50 text-white font-medium shadow-sm"
+                            : "bg-[#0F1117] border-card-border text-gray-300"
                         }`}
                       >
                         <span
-                          className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs shrink-0 ${
+                          className={`w-6 h-6 rounded flex items-center justify-center font-bold text-xs shrink-0 ${
                             isCorrect
-                              ? "bg-emerald-500 text-white font-extrabold shadow-[0_0_10px_rgba(16,185,129,0.4)]"
-                              : "bg-white/10 text-gray-400"
+                              ? "bg-success text-black font-extrabold"
+                              : "bg-card-border/50 text-gray-400"
                           }`}
                         >
                           {formatChoiceLetter(c.key, useThaiChoices)}
@@ -290,8 +290,8 @@ export default function MockDetailPage({
 
                 {/* Explanation */}
                 {showAnswers && q.explanation && (
-                  <div className="mt-3 p-3.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs sm:text-sm text-gray-300 space-y-1">
-                    <span className="text-xs font-semibold text-gold block uppercase tracking-wider">
+                  <div className="mt-3 p-3.5 rounded-lg bg-card-border/20 border border-card-border text-xs sm:text-sm text-gray-300 space-y-1">
+                    <span className="text-xs font-semibold text-primary-accent block uppercase tracking-wider">
                       {t.mock.explanationLabel}
                     </span>
                     <p className="text-gray-300 whitespace-pre-line leading-relaxed">
