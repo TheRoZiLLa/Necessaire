@@ -1,0 +1,105 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import { getSupabaseClient, isSupabaseConfigured } from "./supabase";
+import { Player, RoomStatus } from "@/types";
+
+export type RoomEvent =
+  | { type: "PLAYER_JOINED"; player: Player }
+  | { type: "PLAYER_LEFT"; playerId: string }
+  | { type: "ROOM_STARTED"; currentQuestion: number; status: RoomStatus }
+  | { type: "ROOM_SYNC_REQUEST" }
+  | { type: "ROOM_SYNC_RESPONSE"; players: Player[]; status: RoomStatus; currentQuestion: number };
+
+/**
+ * Broadcast an event to all clients in the same room via Supabase Realtime and Browser BroadcastChannel.
+ */
+export async function broadcastRoomEvent(
+  roomCode: string,
+  event: RoomEvent
+): Promise<void> {
+  const normalizedCode = roomCode.trim().toUpperCase();
+
+  // 1. Browser BroadcastChannel (for instant multi-tab/window sync)
+  if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+    try {
+      const channel = new BroadcastChannel(`necessaire-room-${normalizedCode}`);
+      channel.postMessage(event);
+      channel.close();
+    } catch (err) {
+      console.warn("BroadcastChannel error:", err);
+    }
+  }
+
+  // 2. Supabase Realtime Broadcast (for multi-device / network clients)
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const channel = supabase.channel(`room:${normalizedCode}`);
+        await channel.send({
+          type: "broadcast",
+          event: "room_event",
+          payload: event,
+        });
+      }
+    } catch (err) {
+      console.warn("Supabase broadcast error:", err);
+    }
+  }
+}
+
+/**
+ * React Hook to subscribe to real-time events for a room.
+ */
+export function useRoomRealtime(
+  roomCode: string,
+  onEvent: (event: RoomEvent) => void
+) {
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
+
+  useEffect(() => {
+    if (!roomCode) return;
+    const normalizedCode = roomCode.trim().toUpperCase();
+
+    // 1. Browser BroadcastChannel Listener
+    let bc: BroadcastChannel | null = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      bc = new BroadcastChannel(`necessaire-room-${normalizedCode}`);
+      bc.onmessage = (messageEvent) => {
+        if (messageEvent.data) {
+          onEventRef.current(messageEvent.data as RoomEvent);
+        }
+      };
+    }
+
+    // 2. Supabase Realtime Channel Listener
+    let supabaseChannel: any = null;
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        supabaseChannel = supabase
+          .channel(`room:${normalizedCode}`)
+          .on("broadcast", { event: "room_event" }, ({ payload }) => {
+            if (payload) {
+              onEventRef.current(payload as RoomEvent);
+            }
+          })
+          .subscribe();
+      }
+    }
+
+    return () => {
+      if (bc) {
+        bc.close();
+      }
+      if (supabaseChannel && isSupabaseConfigured()) {
+        const supabase = getSupabaseClient();
+        if (supabase) {
+          supabase.removeChannel(supabaseChannel);
+        }
+      }
+    };
+  }, [roomCode]);
+}

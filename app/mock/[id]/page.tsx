@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, use } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
@@ -12,10 +13,17 @@ import {
   EyeOff,
   PlusCircle,
   HelpCircle,
+  Users,
+  User,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
+import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 import { getMockById } from "@/lib/storage";
+import { createRoom } from "@/lib/room";
 import { MockWithQuestions, ChoiceLetter } from "@/types";
 
 export default function MockDetailPage({
@@ -25,10 +33,18 @@ export default function MockDetailPage({
 }) {
   const resolvedParams = use(params);
   const mockId = resolvedParams.id;
+  const router = useRouter();
+  const { success, error } = useToast();
 
   const [mock, setMock] = useState<MockWithQuestions | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAnswers, setShowAnswers] = useState(true);
+
+  // Create Room Modal states
+  const [isHostModalOpen, setIsHostModalOpen] = useState(false);
+  const [hostNickname, setHostNickname] = useState("");
+  const [nicknameError, setNicknameError] = useState<string | undefined>();
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
   useEffect(() => {
     async function loadMock() {
@@ -44,6 +60,34 @@ export default function MockDetailPage({
     }
     loadMock();
   }, [mockId]);
+
+  const handleCreateRoomSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hostNickname.trim()) {
+      setNicknameError("Please enter your nickname.");
+      return;
+    }
+
+    setIsCreatingRoom(true);
+    try {
+      const res = await createRoom(mockId, hostNickname.trim());
+      if (res.success && res.roomCode && res.hostPlayerId) {
+        // Store player ID in sessionStorage
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(`necessaire_player_${res.roomCode}`, res.hostPlayerId);
+          sessionStorage.setItem(`necessaire_nickname_${res.roomCode}`, hostNickname.trim());
+        }
+        success(`Room ${res.roomCode} created! Joining lobby as Host...`, "Room Created");
+        router.push(`/room/${res.roomCode}`);
+      } else {
+        error(res.error || "Failed to create room.", "Error");
+      }
+    } catch (err: any) {
+      error(err.message || "An unexpected error occurred.", "Error");
+    } finally {
+      setIsCreatingRoom(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -119,7 +163,7 @@ export default function MockDetailPage({
         </div>
 
         {/* Header Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <Button
             variant="outline"
             size="sm"
@@ -144,6 +188,17 @@ export default function MockDetailPage({
               New Mock
             </Button>
           </Link>
+
+          {/* Create Room Action */}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsHostModalOpen(true)}
+            leftIcon={<Users className="w-4 h-4" />}
+            rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+          >
+            Create Room
+          </Button>
         </div>
       </div>
 
@@ -226,6 +281,50 @@ export default function MockDetailPage({
           );
         })}
       </div>
+
+      {/* Host Modal to enter nickname & launch room */}
+      <Modal
+        isOpen={isHostModalOpen}
+        onClose={() => setIsHostModalOpen(false)}
+        title="Host a Mock Test Session"
+        description="Choose your host nickname to create a room code for your friends."
+      >
+        <form onSubmit={handleCreateRoomSubmit} className="space-y-4">
+          <Input
+            label="Your Host Nickname *"
+            placeholder="e.g., Dome"
+            value={hostNickname}
+            onChange={(e) => {
+              setHostNickname(e.target.value);
+              if (nicknameError) setNicknameError(undefined);
+            }}
+            error={nicknameError}
+            leftIcon={<User className="w-4 h-4" />}
+            maxLength={20}
+            autoFocus
+          />
+
+          <div className="pt-2 flex items-center justify-end gap-2.5">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsHostModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={isCreatingRoom}
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              Create Room
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

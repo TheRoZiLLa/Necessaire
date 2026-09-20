@@ -27,31 +27,49 @@ CREATE TABLE IF NOT EXISTS questions (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+-- 3. Rooms Table
+CREATE TABLE IF NOT EXISTS rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_code VARCHAR(8) UNIQUE NOT NULL,
+  mock_id UUID NOT NULL REFERENCES mocks(id) ON DELETE CASCADE,
+  host_id UUID,
+  current_question INTEGER DEFAULT 0 NOT NULL,
+  status TEXT DEFAULT 'LOBBY' NOT NULL CHECK (status IN ('LOBBY', 'ANSWERING', 'DISCUSSION', 'CHANGING', 'REVEAL', 'FINISHED')),
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- 4. Players Table
+CREATE TABLE IF NOT EXISTS players (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+  nickname TEXT NOT NULL,
+  is_host BOOLEAN DEFAULT false NOT NULL,
+  joined_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  last_seen TIMESTAMPTZ DEFAULT now() NOT NULL,
+  CONSTRAINT unique_room_nickname UNIQUE(room_id, nickname)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_questions_mock_id ON questions(mock_id);
 CREATE INDEX IF NOT EXISTS idx_questions_number ON questions(mock_id, question_number);
+CREATE INDEX IF NOT EXISTS idx_rooms_code ON rooms(room_code);
+CREATE INDEX IF NOT EXISTS idx_players_room_id ON players(room_id);
 
 -- Row Level Security (RLS)
 ALTER TABLE mocks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rooms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE players ENABLE ROW LEVEL SECURITY;
 
--- Allow public read & insert for MVP (No authentication requirement)
-CREATE POLICY "Allow public read on mocks"
-  ON mocks FOR SELECT
-  TO anon, authenticated
-  USING (true);
+-- Allow public read & write for MVP (No authentication requirement)
+CREATE POLICY "Allow public read on mocks" ON mocks FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow public insert on mocks" ON mocks FOR INSERT TO anon, authenticated WITH CHECK (true);
 
-CREATE POLICY "Allow public insert on mocks"
-  ON mocks FOR INSERT
-  TO anon, authenticated
-  WITH CHECK (true);
+CREATE POLICY "Allow public read on questions" ON questions FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Allow public insert on questions" ON questions FOR INSERT TO anon, authenticated WITH CHECK (true);
 
-CREATE POLICY "Allow public read on questions"
-  ON questions FOR SELECT
-  TO anon, authenticated
-  USING (true);
+CREATE POLICY "Allow public all on rooms" ON rooms FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all on players" ON players FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow public insert on questions"
-  ON questions FOR INSERT
-  TO anon, authenticated
-  WITH CHECK (true);
+-- Enable Supabase Realtime for rooms & players
+ALTER PUBLICATION supabase_realtime ADD TABLE rooms, players;

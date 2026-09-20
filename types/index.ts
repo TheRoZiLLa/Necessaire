@@ -43,18 +43,38 @@ export interface ParsedQuestionDraft {
   isValid: boolean;
 }
 
-// Future placeholder types for Room & Participant
-export interface RoomInfo {
-  code: string;
-  title: string;
-  subject?: string;
-  hostNickname: string;
+/**
+ * Room and Multiplayer Types
+ */
+export type RoomStatus =
+  | "LOBBY"
+  | "ANSWERING"
+  | "DISCUSSION"
+  | "CHANGING"
+  | "REVEAL"
+  | "FINISHED";
+
+export interface Room {
+  id: string;
+  roomCode: string;
+  mockId: string;
+  hostId: string;
+  currentQuestion: number;
+  status: RoomStatus;
   createdAt: string;
 }
 
-export interface ParticipantInfo {
+export interface Player {
   id: string;
-  roomCode: string;
+  roomId: string;
   nickname: string;
+  isHost: boolean;
   joinedAt: string;
+  lastSeen: string;
+}
+
+export interface RoomDetails {
+  room: Room;
+  mock: MockWithQuestions;
+  players: Player[];
 }
