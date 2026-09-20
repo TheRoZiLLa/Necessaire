@@ -50,29 +50,32 @@ export function Modal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pencil/30 backdrop-blur-xs animate-in fade-in duration-100"
       onClick={onClose}
     >
       <div
         className={cn(
-          "relative w-full max-w-lg bg-card rounded-xl border border-card-border shadow-2xl p-6 text-gray-100 animate-in zoom-in-95 duration-150",
+          "relative w-full max-w-lg bg-white rounded-wobbly border-2 border-pencil shadow-hard-xl p-6 text-pencil animate-in zoom-in-95 duration-100",
           className
         )}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Paper tape accent on modal top */}
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-24 h-5 paper-tape rotate-[1deg] rounded-sm pointer-events-none z-10" />
+
         <button
           onClick={onClose}
           aria-label="Close modal"
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-card-border/50 transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-full border-2 border-pencil text-pencil hover:text-white hover:bg-marker-red transition-all cursor-pointer shadow-hard-sm hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px]"
         >
           <X className="w-4 h-4" />
         </button>
 
         {title && (
           <div className="mb-4 pr-6">
-            <h2 className="text-lg font-semibold text-white tracking-tight">{title}</h2>
+            <h2 className="text-xl md:text-2xl font-heading font-bold text-pencil tracking-tight">{title}</h2>
             {description && (
-              <p className="text-xs md:text-sm text-gray-400 mt-1">{description}</p>
+              <p className="text-xs md:text-sm font-body text-pencil-light mt-1">{description}</p>
             )}
           </div>
         )}

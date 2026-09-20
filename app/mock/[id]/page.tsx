@@ -104,8 +104,8 @@ export default function MockDetailPage({
   if (loading) {
     return (
       <div className="flex-1 flex flex-col justify-center items-center py-24 space-y-4">
-        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-        <p className="text-xs text-gray-400">{t.mock.loading}</p>
+        <div className="w-8 h-8 rounded-full border-2 border-pencil border-t-transparent animate-spin" />
+        <p className="text-sm font-body text-pencil/60">{t.mock.loading}</p>
       </div>
     );
   }
@@ -113,15 +113,15 @@ export default function MockDetailPage({
   if (!mock) {
     return (
       <div className="flex-1 flex flex-col justify-center items-center px-4 py-20">
-        <Card className="max-w-md w-full text-center p-8 space-y-4">
-          <HelpCircle className="w-10 h-10 text-gray-500 mx-auto" />
-          <h2 className="text-xl font-bold text-white">{t.mock.notFoundTitle}</h2>
-          <p className="text-xs sm:text-sm text-gray-400">
+        <Card className="max-w-md w-full text-center p-8 space-y-4 shadow-hard-lg">
+          <HelpCircle className="w-10 h-10 text-pencil/50 mx-auto" />
+          <h2 className="text-2xl font-heading font-bold text-pencil">{t.mock.notFoundTitle}</h2>
+          <p className="text-sm font-body text-pencil/70">
             {t.mock.notFoundDesc}
           </p>
           <div className="pt-2">
             <Link href="/create">
-              <Button variant="primary" size="sm">
+              <Button variant="primary" size="sm" className="font-heading font-bold">
                 {t.mock.createNewMock}
               </Button>
             </Link>
@@ -137,38 +137,38 @@ export default function MockDetailPage({
       <div>
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-heading font-bold text-pencil/70 hover:text-pencil transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
           <span>{t.mock.backHome}</span>
         </Link>
       </div>
 
       {/* Header Info */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-card-border/60 pb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-dashed border-pencil/20 pb-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/15 text-primary-accent border border-primary/30">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-wobbly-sm text-xs font-heading font-bold bg-stamp-green/15 text-stamp-green border border-stamp-green">
               <CheckCircle2 className="w-3.5 h-3.5" />
               {t.mock.mockReady}
             </span>
             {mock.subject && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-card text-gray-300 border border-card-border">
-                <BookOpen className="w-3 h-3 text-gray-400" />
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-wobbly-sm text-xs font-heading font-bold bg-sticky-yellow text-pencil border border-pencil shadow-hard-sm">
+                <BookOpen className="w-3 h-3 text-pencil" />
                 {mock.subject}
               </span>
             )}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-heading font-extrabold text-pencil tracking-tight">
             {mock.title}
           </h1>
-          <div className="flex items-center gap-4 text-xs text-gray-400">
+          <div className="flex items-center gap-4 text-xs font-body text-pencil/70">
             <span className="flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5 text-gray-500" />
+              <Layers className="w-3.5 h-3.5 text-pencil/60" />
               {t.mock.questionsCount.replace("{count}", String(mock.questions.length))}
             </span>
             <span className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+              <Calendar className="w-3.5 h-3.5 text-pencil/60" />
               {new Date(mock.createdAt).toLocaleDateString()}
             </span>
           </div>
@@ -180,11 +180,12 @@ export default function MockDetailPage({
             variant="outline"
             size="sm"
             onClick={() => setShowAnswers(!showAnswers)}
+            className="font-heading font-bold text-xs"
             leftIcon={
               showAnswers ? (
-                <EyeOff className="w-4 h-4 text-gray-400" />
+                <EyeOff className="w-4 h-4 text-pencil/60" />
               ) : (
-                <Eye className="w-4 h-4 text-primary-accent" />
+                <Eye className="w-4 h-4 text-pencil" />
               )
             }
           >
@@ -196,16 +197,17 @@ export default function MockDetailPage({
             variant="outline"
             size="sm"
             onClick={() => setUseThaiChoices(!useThaiChoices)}
-            className="text-xs font-mono"
+            className="text-xs font-heading font-bold"
             title="สลับการแสดงผลตัวเลือก A-D และ ก-ง"
           >
-            {t.mock.choiceToggle} <strong className="text-primary-accent ml-1">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</strong>
+            {t.mock.choiceToggle} <strong className="text-pen-blue ml-1">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</strong>
           </Button>
 
           <Link href="/create">
             <Button
               variant="secondary"
               size="sm"
+              className="font-heading font-bold text-xs"
               leftIcon={<PlusCircle className="w-4 h-4" />}
             >
               {t.mock.newMockBtn}
@@ -217,6 +219,7 @@ export default function MockDetailPage({
             variant="primary"
             size="sm"
             onClick={() => setIsHostModalOpen(true)}
+            className="font-heading font-bold text-xs"
             leftIcon={<Users className="w-4 h-4" />}
             rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
           >
@@ -236,18 +239,18 @@ export default function MockDetailPage({
           ];
 
           return (
-            <Card key={q.id}>
-              <CardHeader className="py-3 px-4 sm:px-6 bg-card-border/10 flex flex-row items-center justify-between">
+            <Card key={q.id} className="shadow-hard-sm">
+              <CardHeader className="py-3 px-4 sm:px-6 bg-paper flex flex-row items-center justify-between border-b-2 border-pencil/15">
                 <div className="flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-md bg-card-border/60 font-mono text-xs font-bold flex items-center justify-center text-gray-200">
+                  <span className="w-8 h-8 rounded-wobbly-sm bg-sticky-yellow border-2 border-pencil font-heading font-bold text-xs flex items-center justify-center text-pencil shadow-hard-sm">
                     #{q.questionNumber}
                   </span>
-                  <CardTitle className="text-base text-gray-200 font-medium">
+                  <CardTitle className="text-base text-pencil font-heading font-bold">
                     {t.mock.questionNumber.replace("{number}", String(q.questionNumber))}
                   </CardTitle>
                 </div>
                 {showAnswers && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-success/15 text-success border border-success/30">
+                  <span className="text-xs font-heading font-bold px-2.5 py-0.5 rounded-wobbly-sm bg-stamp-green/15 text-stamp-green border border-stamp-green">
                     {t.mock.answerLabel.replace("{answer}", formatChoiceLetter(q.correctAnswer, useThaiChoices))}
                   </span>
                 )}
@@ -255,7 +258,7 @@ export default function MockDetailPage({
 
               <CardContent className="p-4 sm:p-6 space-y-4">
                 {/* Question Text */}
-                <p className="text-sm sm:text-base text-white font-medium whitespace-pre-line leading-relaxed">
+                <p className="text-base sm:text-lg text-pencil font-heading font-semibold whitespace-pre-line leading-relaxed">
                   {q.questionText}
                 </p>
 
@@ -267,22 +270,22 @@ export default function MockDetailPage({
                     return (
                       <div
                         key={c.key}
-                        className={`flex items-start gap-3 p-3 rounded-lg border transition-all text-xs sm:text-sm ${
+                        className={`flex items-start gap-3 p-3 rounded-wobbly-sm border-2 transition-all text-xs sm:text-sm ${
                           isCorrect
-                            ? "bg-success/10 border-success/50 text-white font-medium shadow-sm"
-                            : "bg-[#0F1117] border-card-border text-gray-300"
+                            ? "bg-stamp-green/10 border-stamp-green text-pencil font-semibold"
+                            : "bg-white border-pencil/30 text-pencil/80"
                         }`}
                       >
                         <span
-                          className={`w-6 h-6 rounded flex items-center justify-center font-bold text-xs shrink-0 ${
+                          className={`w-6 h-6 rounded-wobbly-sm flex items-center justify-center font-heading font-bold text-xs shrink-0 ${
                             isCorrect
-                              ? "bg-success text-black font-extrabold"
-                              : "bg-card-border/50 text-gray-400"
+                              ? "bg-stamp-green text-white"
+                              : "bg-paper border border-pencil/40 text-pencil"
                           }`}
                         >
                           {formatChoiceLetter(c.key, useThaiChoices)}
                         </span>
-                        <span className="leading-snug pt-0.5">{c.text}</span>
+                        <span className="leading-snug pt-0.5 font-body">{c.text}</span>
                       </div>
                     );
                   })}
@@ -290,11 +293,11 @@ export default function MockDetailPage({
 
                 {/* Explanation */}
                 {showAnswers && q.explanation && (
-                  <div className="mt-3 p-3.5 rounded-lg bg-card-border/20 border border-card-border text-xs sm:text-sm text-gray-300 space-y-1">
-                    <span className="text-xs font-semibold text-primary-accent block uppercase tracking-wider">
-                      {t.mock.explanationLabel}
+                  <div className="mt-3 p-3.5 rounded-wobbly-sm bg-sticky-yellow/40 border-2 border-dashed border-pencil/30 text-xs sm:text-sm text-pencil space-y-1">
+                    <span className="text-xs font-heading font-bold text-pencil block uppercase tracking-wider">
+                      💡 {t.mock.explanationLabel}
                     </span>
-                    <p className="text-gray-300 whitespace-pre-line leading-relaxed">
+                    <p className="text-pencil/80 font-body whitespace-pre-line leading-relaxed">
                       {q.explanation}
                     </p>
                   </div>
@@ -322,7 +325,7 @@ export default function MockDetailPage({
               if (nicknameError) setNicknameError(undefined);
             }}
             error={nicknameError}
-            leftIcon={<User className="w-4 h-4" />}
+            leftIcon={<User className="w-4 h-4 text-pencil/60" />}
             maxLength={20}
             autoFocus
           />
@@ -333,6 +336,7 @@ export default function MockDetailPage({
               variant="secondary"
               size="sm"
               onClick={() => setIsHostModalOpen(false)}
+              className="font-heading font-bold"
             >
               {t.mock.cancel}
             </Button>
@@ -341,6 +345,7 @@ export default function MockDetailPage({
               variant="primary"
               size="sm"
               isLoading={isCreatingRoom}
+              className="font-heading font-bold"
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
               {t.mock.startRoomBtn}

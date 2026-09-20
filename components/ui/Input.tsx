@@ -32,14 +32,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs md:text-sm font-medium text-gray-300 select-none flex items-center justify-between"
+            className="text-sm font-heading font-bold text-pencil select-none flex items-center justify-between"
           >
             <span>{label}</span>
           </label>
         )}
         <div className="relative flex items-center">
           {leftIcon && (
-            <div className="absolute left-3.5 flex items-center pointer-events-none text-gray-400">
+            <div className="absolute left-3.5 flex items-center pointer-events-none text-pencil-light">
               {leftIcon}
             </div>
           )}
@@ -48,26 +48,26 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             disabled={disabled}
             className={cn(
-              "w-full bg-[#121738]/80 text-white placeholder-gray-400 rounded-xl border border-white/15 px-4 py-2.5 text-sm transition-all duration-200 outline-none backdrop-blur-md",
-              "focus:border-primary focus:ring-2 focus:ring-primary/40 focus:bg-[#161D45] focus:shadow-glow-coral",
+              "w-full bg-white text-pencil placeholder:text-pencil-muted/70 rounded-wobbly-sm border-2 border-pencil px-4 py-2.5 text-base font-body shadow-hard-sm transition-all duration-100 outline-none",
+              "focus:border-pen-blue focus:shadow-hard-blue focus:translate-x-[1px] focus:translate-y-[1px]",
               leftIcon && "pl-10",
               rightIcon && "pr-10",
-              error && "border-error focus:border-error focus:ring-error text-error/90",
-              disabled && "opacity-50 cursor-not-allowed bg-card/50",
+              error && "border-marker-red text-marker-red focus:border-marker-red focus:shadow-hard-red",
+              disabled && "opacity-50 cursor-not-allowed bg-paper-muted",
               className
             )}
             {...props}
           />
           {rightIcon && (
-            <div className="absolute right-3.5 flex items-center pointer-events-none text-gray-400">
+            <div className="absolute right-3.5 flex items-center pointer-events-none text-pencil-light">
               {rightIcon}
             </div>
           )}
         </div>
         {error ? (
-          <p className="text-xs text-error font-medium transition-all">{error}</p>
+          <p className="text-xs font-body font-semibold text-marker-red transition-all">{error}</p>
         ) : helperText ? (
-          <p className="text-xs text-gray-500">{helperText}</p>
+          <p className="text-xs font-body text-pencil-light">{helperText}</p>
         ) : null}
       </div>
     );

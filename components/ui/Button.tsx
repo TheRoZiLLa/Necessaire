@@ -27,27 +27,27 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 select-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]";
+      "inline-flex items-center justify-center font-body font-semibold rounded-wobbly-sm transition-all duration-100 select-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-pen-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none";
 
     const variantStyles = {
       primary:
-        "bg-primary hover:bg-primary-hover text-white shadow-glow hover:shadow-lg hover:shadow-primary/30 border border-primary-accent/30",
+        "bg-white text-pencil border-2 border-pencil shadow-hard hover:bg-marker-red hover:text-white hover:border-pencil hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none",
       secondary:
-        "bg-card hover:bg-card-hover text-gray-200 border border-card-border hover:border-gray-600 shadow-sm",
+        "bg-[#f4eee5] text-pencil border-2 border-pencil shadow-hard hover:bg-pen-blue hover:text-white hover:border-pencil hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none",
       outline:
-        "bg-transparent text-gray-200 border border-card-border hover:bg-card hover:border-primary-accent/50 hover:text-white",
+        "bg-transparent text-pencil border-2 border-pencil shadow-hard-sm hover:bg-paper-muted/60 hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none active:translate-x-[2px] active:translate-y-[2px]",
       ghost:
-        "bg-transparent text-gray-400 hover:text-gray-100 hover:bg-card",
+        "bg-transparent text-pencil hover:bg-paper-muted/50 hover:rotate-1 active:scale-95",
       danger:
-        "bg-error/20 hover:bg-error/30 text-error border border-error/40 hover:border-error/60",
+        "bg-[#fee2e2] text-marker-red border-2 border-marker-red shadow-hard-red hover:bg-[#fca5a5] hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none",
       gold:
-        "bg-amber-500 hover:bg-amber-600 text-gray-950 font-bold border border-amber-400 shadow-sm",
+        "bg-sticky-yellow text-pencil font-bold border-2 border-pencil shadow-hard hover:bg-[#fef08a] hover:shadow-hard-sm hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none",
     };
 
     const sizeStyles = {
-      sm: "text-xs px-3 py-1.5 gap-1.5",
-      md: "text-sm px-4 py-2.5 gap-2",
-      lg: "text-base px-6 py-3.5 gap-2.5",
+      sm: "text-xs md:text-sm px-3 py-1.5 gap-1.5",
+      md: "text-sm md:text-base px-4 py-2 gap-2",
+      lg: "text-base md:text-lg px-6 py-3 gap-2.5",
     };
 
     return (
@@ -63,7 +63,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         {isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin text-current" />
+          <Loader2 className="w-4 h-4 animate-spin text-current shrink-0" />
         ) : (
           leftIcon
         )}

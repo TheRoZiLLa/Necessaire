@@ -3,24 +3,29 @@ import { cn } from "@/lib/utils";
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   hoverable?: boolean;
+  tape?: boolean;
 }
 
 export function Card({
   className,
   hoverable = false,
+  tape = false,
   children,
   ...props
 }: CardProps) {
   return (
     <div
       className={cn(
-        "bg-card rounded-xl border border-card-border shadow-md overflow-hidden transition-all duration-200",
+        "relative bg-white text-pencil rounded-wobbly border-2 border-pencil shadow-hard-lg overflow-visible transition-all duration-150",
         hoverable &&
-          "hover:border-primary-accent/40 hover:shadow-glow-sm hover:translate-y-[-1px]",
+          "hover:border-pencil hover:shadow-hard hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer",
         className
       )}
       {...props}
     >
+      {tape && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-5 paper-tape rotate-[-2deg] z-10 pointer-events-none rounded-sm" />
+      )}
       {children}
     </div>
   );
@@ -33,7 +38,7 @@ export function CardHeader({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("px-6 py-5 border-b border-card-border/50", className)}
+      className={cn("px-6 py-5 border-b-2 border-paper-muted", className)}
       {...props}
     >
       {children}
@@ -49,7 +54,7 @@ export function CardTitle({
   return (
     <h3
       className={cn(
-        "text-lg font-semibold text-white tracking-tight flex items-center gap-2",
+        "text-xl font-heading font-bold text-pencil tracking-tight flex items-center gap-2",
         className
       )}
       {...props}
@@ -66,7 +71,7 @@ export function CardDescription({
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-xs md:text-sm text-gray-400 mt-1 leading-relaxed", className)}
+      className={cn("text-xs md:text-sm text-pencil-light mt-1 font-body leading-relaxed", className)}
       {...props}
     >
       {children}
@@ -94,7 +99,7 @@ export function CardFooter({
   return (
     <div
       className={cn(
-        "px-6 py-4 bg-card-border/20 border-t border-card-border/50 flex items-center justify-between",
+        "px-6 py-4 bg-paper-dark border-t-2 border-paper-muted flex items-center justify-between rounded-b-wobbly",
         className
       )}
       {...props}

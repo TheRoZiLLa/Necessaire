@@ -103,15 +103,15 @@ function JoinRoomForm() {
       <div className="flex items-center justify-between">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-heading font-bold text-pencil/70 hover:text-pencil transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
           <span>{t.join.backHome}</span>
         </Link>
         <button
           type="button"
           onClick={() => setIsHelpModalOpen(true)}
-          className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary-accent transition-colors"
+          className="inline-flex items-center gap-1 text-xs font-heading font-bold text-pencil/60 hover:text-pencil transition-colors"
         >
           <HelpCircle className="w-3.5 h-3.5" />
           <span>{t.join.needHelp}</span>
@@ -119,14 +119,15 @@ function JoinRoomForm() {
       </div>
 
       <form onSubmit={handleJoin}>
-        <Card>
+        <Card tape={true} className="shadow-hard-lg">
           <CardHeader>
-            <div className="flex items-center gap-2 text-gray-400 mb-1 text-xs font-semibold uppercase tracking-wider">
-              <LogIn className="w-4 h-4 text-primary-accent" />
-              <span>{t.join.badge}</span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="bg-sticky-yellow text-pencil px-2.5 py-0.5 rounded-wobbly-sm border border-pencil font-heading font-bold text-xs shadow-hard-sm">
+                🏷️ {t.join.badge}
+              </span>
             </div>
-            <CardTitle className="text-xl sm:text-2xl">{t.join.title}</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-2xl sm:text-3xl font-heading font-extrabold text-pencil">{t.join.title}</CardTitle>
+            <CardDescription className="text-pencil/70 font-body text-sm">
               {t.join.desc}
             </CardDescription>
           </CardHeader>
@@ -139,8 +140,8 @@ function JoinRoomForm() {
               value={roomCode}
               onChange={handleRoomCodeChange}
               error={errors.roomCode}
-              leftIcon={<KeyRound className="w-4 h-4" />}
-              className="font-mono tracking-widest uppercase text-base placeholder:normal-case placeholder:font-sans placeholder:tracking-normal font-bold"
+              leftIcon={<KeyRound className="w-4 h-4 text-pencil/60" />}
+              className="font-mono tracking-widest uppercase text-lg placeholder:normal-case placeholder:font-body placeholder:tracking-normal font-bold"
               maxLength={8}
               autoFocus={!roomCode}
               autoCapitalize="characters"
@@ -159,7 +160,7 @@ function JoinRoomForm() {
                 if (errors.nickname) setErrors((prev) => ({ ...prev, nickname: undefined }));
               }}
               error={errors.nickname}
-              leftIcon={<User className="w-4 h-4" />}
+              leftIcon={<User className="w-4 h-4 text-pencil/60" />}
               maxLength={20}
               autoFocus={Boolean(roomCode)}
               autoCapitalize="words"
@@ -168,14 +169,15 @@ function JoinRoomForm() {
             />
           </CardContent>
 
-          <CardFooter>
-            <Link href="/" className="text-xs text-gray-400 hover:text-white transition-colors">
+          <CardFooter className="flex items-center justify-between pt-4 border-t-2 border-pencil/10">
+            <Link href="/" className="text-xs font-heading font-bold text-pencil/60 hover:text-pencil transition-colors">
               {t.join.cancel}
             </Link>
             <Button
               type="submit"
               variant="primary"
               isLoading={isJoining}
+              className="font-heading font-bold px-6"
             >
               {isJoining ? t.join.joining : t.join.joinBtn}
             </Button>
@@ -190,16 +192,17 @@ function JoinRoomForm() {
         title={t.join.helpTitle}
         description={t.join.helpDesc}
       >
-        <div className="space-y-3 text-xs sm:text-sm text-gray-300">
-          <p>{t.join.help1}</p>
-          <p>{t.join.help2}</p>
-          <p>{t.join.help3}</p>
+        <div className="space-y-3 text-xs sm:text-sm font-body text-pencil/80 leading-relaxed">
+          <p>📌 {t.join.help1}</p>
+          <p>💬 {t.join.help2}</p>
+          <p>✨ {t.join.help3}</p>
         </div>
         <div className="mt-6 flex justify-end">
           <Button
             size="sm"
             variant="secondary"
             onClick={() => setIsHelpModalOpen(false)}
+            className="font-heading font-bold"
           >
             {t.join.gotIt}
           </Button>
@@ -212,7 +215,7 @@ function JoinRoomForm() {
 export default function JoinRoomPage() {
   return (
     <div className="flex-1 flex flex-col justify-center items-center px-4 py-8 sm:py-16">
-      <Suspense fallback={<div className="text-xs text-gray-400">Loading form...</div>}>
+      <Suspense fallback={<div className="text-xs font-body text-pencil/60">Loading form...</div>}>
         <JoinRoomForm />
       </Suspense>
     </div>

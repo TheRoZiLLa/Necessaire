@@ -69,38 +69,38 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={t.id}
             role="alert"
             className={cn(
-              "pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-xl backdrop-blur-md transition-all animate-in slide-in-from-bottom-3 duration-200",
+              "pointer-events-auto flex items-start gap-3 p-3.5 rounded-wobbly-sm border-2 shadow-hard backdrop-blur-md transition-all animate-in slide-in-from-bottom-3 duration-200",
               t.type === "success" &&
-                "bg-card/95 border-success/40 text-gray-100 shadow-success/10",
+                "bg-white border-stamp-green text-pencil shadow-hard-sm",
               t.type === "error" &&
-                "bg-card/95 border-error/40 text-gray-100 shadow-error/10",
+                "bg-white border-marker-red text-pencil shadow-hard-red",
               t.type === "info" &&
-                "bg-card/95 border-primary/40 text-gray-100 shadow-primary/10"
+                "bg-sticky-yellow border-pencil text-pencil shadow-hard-yellow"
             )}
           >
             <div className="mt-0.5 shrink-0">
               {t.type === "success" && (
-                <CheckCircle2 className="w-5 h-5 text-success" />
+                <CheckCircle2 className="w-5 h-5 text-stamp-green stroke-[2.5]" />
               )}
               {t.type === "error" && (
-                <AlertCircle className="w-5 h-5 text-error" />
+                <AlertCircle className="w-5 h-5 text-marker-red stroke-[2.5]" />
               )}
               {t.type === "info" && (
-                <Info className="w-5 h-5 text-primary-accent" />
+                <Info className="w-5 h-5 text-pencil" />
               )}
             </div>
             <div className="flex-1 min-w-0">
               {t.title && (
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-300 mb-0.5">
+                <h4 className="text-xs font-heading font-bold uppercase tracking-wider text-pencil mb-0.5">
                   {t.title}
                 </h4>
               )}
-              <p className="text-sm text-gray-200 leading-snug">{t.message}</p>
+              <p className="text-sm font-body text-pencil leading-snug">{t.message}</p>
             </div>
             <button
               onClick={() => removeToast(t.id)}
               aria-label="Dismiss notification"
-              className="shrink-0 p-1 text-gray-400 hover:text-white rounded-md transition-colors"
+              className="shrink-0 p-1 text-pencil/60 hover:text-pencil rounded-wobbly-sm transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>

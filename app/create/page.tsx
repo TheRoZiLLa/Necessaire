@@ -267,24 +267,25 @@ export default function CreateMockPage() {
       <div>
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-heading font-bold text-pencil/70 hover:text-pencil transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
           <span>{t.create.backHome}</span>
         </Link>
       </div>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-card-border/60 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-dashed border-pencil/20 pb-6">
         <div>
-          <div className="flex items-center gap-2 text-primary-accent mb-1 text-xs font-semibold uppercase tracking-wider">
-            <Layers className="w-4 h-4" />
-            <span>{t.create.badge}</span>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="bg-sticky-yellow text-pencil px-2.5 py-0.5 rounded-wobbly-sm border border-pencil font-heading font-bold text-xs shadow-hard-sm">
+              📝 {t.create.badge}
+            </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-heading font-extrabold text-pencil tracking-tight">
             {t.create.title}
           </h1>
-          <p className="text-xs sm:text-sm text-gray-400 mt-1">
+          <p className="text-sm font-body text-pencil/70 mt-1">
             {t.create.desc}
           </p>
         </div>
@@ -296,12 +297,12 @@ export default function CreateMockPage() {
             variant="outline"
             size="sm"
             onClick={() => handleCopyPrompt("th")}
-            className="shrink-0 text-xs"
+            className="shrink-0 text-xs font-heading font-bold"
             leftIcon={
               copiedLang === "th" ? (
-                <Check className="w-3.5 h-3.5 text-success" />
+                <Check className="w-3.5 h-3.5 text-stamp-green stroke-[3]" />
               ) : (
-                <Copy className="w-3.5 h-3.5 text-primary-accent" />
+                <Copy className="w-3.5 h-3.5 text-pencil" />
               )
             }
           >
@@ -313,12 +314,12 @@ export default function CreateMockPage() {
             variant="ghost"
             size="sm"
             onClick={() => handleCopyPrompt("en")}
-            className="shrink-0 text-xs text-gray-400 hover:text-white"
+            className="shrink-0 text-xs font-heading font-bold text-pencil/70 hover:text-pencil"
             leftIcon={
               copiedLang === "en" ? (
-                <Check className="w-3.5 h-3.5 text-success" />
+                <Check className="w-3.5 h-3.5 text-stamp-green stroke-[3]" />
               ) : (
-                <Copy className="w-3.5 h-3.5 text-gray-400" />
+                <Copy className="w-3.5 h-3.5 text-pencil/60" />
               )
             }
           >
@@ -328,10 +329,10 @@ export default function CreateMockPage() {
       </div>
 
       {/* Section 1: Basic Information */}
-      <Card>
+      <Card tape={true}>
         <CardHeader>
-          <CardTitle className="text-base sm:text-lg">{t.create.step1Title}</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl font-heading font-bold text-pencil">{t.create.step1Title}</CardTitle>
+          <CardDescription className="font-body text-pencil/70">
             {t.create.step1Desc}
           </CardDescription>
         </CardHeader>
@@ -341,7 +342,7 @@ export default function CreateMockPage() {
             placeholder={t.create.mockTitlePlaceholder}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            leftIcon={<FileText className="w-4 h-4" />}
+            leftIcon={<FileText className="w-4 h-4 text-pencil/60" />}
             maxLength={80}
             required
           />
@@ -350,36 +351,36 @@ export default function CreateMockPage() {
             placeholder={t.create.mockSubjectPlaceholder}
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            leftIcon={<BookOpen className="w-4 h-4" />}
+            leftIcon={<BookOpen className="w-4 h-4 text-pencil/60" />}
             maxLength={40}
           />
         </CardContent>
       </Card>
 
       {/* Section 2: Paste Raw Questions */}
-      <Card>
+      <Card tape={true}>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-base sm:text-lg">{t.create.step2Title}</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-xl font-heading font-bold text-pencil">{t.create.step2Title}</CardTitle>
+              <CardDescription className="font-body text-pencil/70">
                 {t.create.step2Desc}
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">{t.create.insertSampleLabel}</span>
+              <span className="text-xs font-heading text-pencil/60">{t.create.insertSampleLabel}</span>
               <button
                 type="button"
                 onClick={() => handleInsertSample("th")}
-                className="text-xs text-primary-accent hover:underline focus:outline-none font-medium"
+                className="text-xs font-heading font-bold text-pen-blue hover:underline focus:outline-none"
               >
                 {t.create.insertSampleTh}
               </button>
-              <span className="text-gray-600 text-xs">•</span>
+              <span className="text-pencil/40 text-xs">•</span>
               <button
                 type="button"
                 onClick={() => handleInsertSample("en")}
-                className="text-xs text-gray-400 hover:text-white hover:underline focus:outline-none"
+                className="text-xs font-heading font-bold text-pencil/70 hover:text-pencil hover:underline focus:outline-none"
               >
                 {t.create.insertSampleEn}
               </button>
@@ -389,7 +390,7 @@ export default function CreateMockPage() {
         <CardContent className="space-y-4">
           <textarea
             rows={8}
-            className="w-full bg-[#121738]/80 text-white placeholder-gray-400 rounded-xl border border-white/15 p-4 text-xs sm:text-sm font-mono leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 focus:bg-[#161D45] focus:shadow-glow-coral transition-all backdrop-blur-md"
+            className="w-full bg-white text-pencil placeholder:text-pencil/40 rounded-wobbly-sm border-2 border-pencil p-4 text-xs sm:text-sm font-mono leading-relaxed outline-none focus:border-pen-blue focus:shadow-hard-blue transition-all shadow-hard-sm"
             placeholder={`1. ใครเป็นนายกรัฐมนตรีคนแรกของประเทศไทย?
    ก. พระยามโนปกรณ์นิติธาดา
    ข. พันเอก พระยาพหลพลพยุหเสนา
@@ -411,13 +412,14 @@ export default function CreateMockPage() {
           />
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-            <span className="text-xs text-gray-500">
+            <span className="text-xs font-body text-pencil/60">
               {t.create.copyPromptHelp}
             </span>
             <Button
               type="button"
               variant="primary"
               onClick={handleParse}
+              className="font-heading font-bold"
               leftIcon={<Sparkles className="w-4 h-4" />}
             >
               {t.create.parseBtn}
@@ -430,17 +432,17 @@ export default function CreateMockPage() {
       {hasParsed && (
         <div className="space-y-6">
           {/* Status & Toolbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-card border border-card-border">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-wobbly-md bg-card border-2 border-pencil shadow-hard-sm">
             <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-white">
+              <span className="text-base font-heading font-bold text-pencil">
                 {t.create.questionsLabel} ({parsedQuestions.length})
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/15 text-success border border-success/30">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-wobbly-sm text-xs font-heading font-bold bg-stamp-green/15 text-stamp-green border border-stamp-green">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 {validQuestionsCount} {t.create.validCount}
               </span>
               {invalidQuestionsCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-error/15 text-error border border-error/30">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-wobbly-sm text-xs font-heading font-bold bg-marker-red/15 text-marker-red border border-marker-red">
                   <AlertTriangle className="w-3.5 h-3.5" />
                   {invalidQuestionsCount} {t.create.needsFixCount}
                 </span>
@@ -453,6 +455,7 @@ export default function CreateMockPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleAddQuestion}
+                className="font-heading font-bold"
                 leftIcon={<Plus className="w-3.5 h-3.5" />}
               >
                 {t.create.addQuestionBtn}
@@ -468,15 +471,15 @@ export default function CreateMockPage() {
               return (
                 <Card
                   key={q.tempId}
-                  className={q.isValid ? "border-card-border" : "border-error/50 bg-error/[0.02]"}
+                  className={`shadow-hard-sm ${q.isValid ? "" : "border-marker-red bg-marker-red/[0.03]"}`}
                 >
-                  <CardHeader className="py-3 px-4 sm:px-6 bg-card-border/10 flex flex-row items-center justify-between border-b border-card-border/60">
+                  <CardHeader className="py-3 px-4 sm:px-6 bg-paper flex flex-row items-center justify-between border-b-2 border-pencil/15">
                     <div className="flex items-center gap-2.5">
-                      <span className="w-7 h-7 rounded-md bg-card-border/60 font-mono text-xs font-bold flex items-center justify-center text-gray-200">
+                      <span className="w-8 h-8 rounded-wobbly-sm bg-sticky-yellow border-2 border-pencil font-heading font-bold text-xs flex items-center justify-center text-pencil shadow-hard-sm">
                         #{q.questionNumber}
                       </span>
                       {q.isValid ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
+                        <span className="inline-flex items-center gap-1 text-xs font-heading font-bold text-stamp-green">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           {t.create.validQuestion}
                         </span>
@@ -485,7 +488,7 @@ export default function CreateMockPage() {
                           {q.validationErrors.map((err) => (
                             <span
                               key={err}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-error/20 text-error border border-error/40"
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-wobbly-sm text-[11px] font-heading font-bold bg-marker-red/20 text-marker-red border border-marker-red"
                             >
                               <AlertTriangle className="w-3 h-3" />
                               {err}
@@ -502,7 +505,7 @@ export default function CreateMockPage() {
                         aria-label="Move question up"
                         disabled={index === 0}
                         onClick={() => handleMoveUp(index)}
-                        className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-card-border/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="p-1.5 rounded-wobbly-sm border border-transparent hover:border-pencil text-pencil/70 hover:text-pencil hover:bg-paper disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                       >
                         <ArrowUp className="w-4 h-4" />
                       </button>
@@ -511,7 +514,7 @@ export default function CreateMockPage() {
                         aria-label="Move question down"
                         disabled={index === parsedQuestions.length - 1}
                         onClick={() => handleMoveDown(index)}
-                        className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-card-border/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        className="p-1.5 rounded-wobbly-sm border border-transparent hover:border-pencil text-pencil/70 hover:text-pencil hover:bg-paper disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                       >
                         <ArrowDown className="w-4 h-4" />
                       </button>
@@ -519,7 +522,7 @@ export default function CreateMockPage() {
                         type="button"
                         aria-label="Delete question"
                         onClick={() => handleDeleteDraft(q.tempId)}
-                        className="p-1.5 rounded text-gray-400 hover:text-error hover:bg-error/10 transition-colors ml-1"
+                        className="p-1.5 rounded-wobbly-sm border border-transparent hover:border-marker-red text-pencil/70 hover:text-marker-red hover:bg-marker-red/10 transition-all ml-1"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -529,23 +532,23 @@ export default function CreateMockPage() {
                   <CardContent className="p-4 sm:p-6 space-y-4">
                     {/* Question Text */}
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-gray-400">{t.create.questionTextLabel}</label>
+                      <label className="text-xs font-heading font-bold text-pencil/70">{t.create.questionTextLabel}</label>
                       <textarea
                         rows={2}
                         value={q.questionText}
                         onChange={(e) => handleUpdateDraft(q.tempId, { questionText: e.target.value })}
-                        className="w-full bg-[#0F1117] text-gray-100 placeholder-gray-600 rounded-lg border border-card-border p-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                        className="w-full bg-white text-pencil placeholder:text-pencil/40 rounded-wobbly-sm border-2 border-pencil p-2.5 text-sm outline-none focus:border-pen-blue font-body transition-colors"
                         placeholder={t.create.questionPlaceholder}
                       />
                     </div>
 
                     {/* Choices A - D */}
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 flex items-center justify-between">
+                      <label className="text-xs font-heading font-bold text-pencil/70 flex items-center justify-between">
                         <span>{t.create.choicesHeader}</span>
-                        <span className="text-[11px] text-gray-500">
+                        <span className="text-[11px] font-body text-pencil/60">
                           {t.create.currentCorrectAnswer}{" "}
-                          <strong className="text-primary-accent font-bold">
+                          <strong className="text-stamp-green font-heading font-bold">
                             {q.correctAnswer
                               ? `${q.correctAnswer} (${THAI_CHOICE_MAP[q.correctAnswer as ChoiceLetter] || ""})`
                               : t.create.none}
@@ -567,10 +570,10 @@ export default function CreateMockPage() {
                           return (
                             <div
                               key={letter}
-                              className={`flex items-center rounded-lg border transition-all ${
+                              className={`flex items-center rounded-wobbly-sm border-2 transition-all ${
                                 isCorrect
-                                    ? "border-success/60 bg-success/[0.04]"
-                                    : "border-card-border bg-[#0F1117]"
+                                  ? "border-stamp-green bg-stamp-green/10"
+                                  : "border-pencil/40 bg-white"
                               }`}
                             >
                               <button
@@ -579,10 +582,10 @@ export default function CreateMockPage() {
                                   handleUpdateDraft(q.tempId, { correctAnswer: letter })
                                 }
                                 title={`Set ${letter} (${thaiLetter}) as correct answer`}
-                                className={`px-2.5 py-2 text-xs font-bold rounded-l-lg border-r transition-colors flex items-center gap-1 ${
+                                className={`px-2.5 py-2 text-xs font-heading font-bold border-r-2 transition-colors flex items-center gap-1 ${
                                   isCorrect
-                                    ? "bg-success text-black border-success"
-                                    : "bg-card-border/40 text-gray-400 hover:text-white hover:bg-card-border/70 border-card-border"
+                                    ? "bg-stamp-green text-white border-stamp-green"
+                                    : "bg-paper text-pencil/80 hover:bg-sticky-yellow border-pencil/40"
                                 }`}
                               >
                                 <span>{letter}</span>
@@ -596,7 +599,7 @@ export default function CreateMockPage() {
                                   handleUpdateDraft(q.tempId, { [fieldName]: e.target.value })
                                 }
                                 placeholder={`${t.create.choicePlaceholder} ${letter} (${thaiLetter})...`}
-                                className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm text-gray-200 placeholder-gray-600 outline-none"
+                                className="w-full bg-transparent px-3 py-2 text-xs sm:text-sm text-pencil placeholder:text-pencil/40 outline-none font-body"
                               />
                             </div>
                           );
@@ -606,12 +609,12 @@ export default function CreateMockPage() {
 
                     {/* Explanation */}
                     <div className="space-y-1 pt-1">
-                      <label className="text-xs font-medium text-gray-400">{t.create.explanationLabel}</label>
+                      <label className="text-xs font-heading font-bold text-pencil/70">{t.create.explanationLabel}</label>
                       <input
                         type="text"
                         value={q.explanation}
                         onChange={(e) => handleUpdateDraft(q.tempId, { explanation: e.target.value })}
-                        className="w-full bg-[#0F1117] text-gray-300 placeholder-gray-600 rounded-lg border border-card-border px-3 py-2 text-xs sm:text-sm outline-none focus:border-primary transition-colors"
+                        className="w-full bg-white text-pencil placeholder:text-pencil/40 rounded-wobbly-sm border-2 border-pencil px-3 py-2 text-xs sm:text-sm outline-none focus:border-pen-blue font-body transition-colors"
                         placeholder={t.create.explanationPlaceholder}
                       />
                     </div>
@@ -622,12 +625,12 @@ export default function CreateMockPage() {
           </div>
 
           {/* Bottom Import Actions */}
-          <div className="sticky bottom-6 z-30 p-4 rounded-xl bg-card/95 border border-primary/40 shadow-2xl backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="sticky bottom-6 z-30 p-4 rounded-wobbly-md bg-card/95 border-2 border-pencil shadow-hard-lg backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-center sm:text-left">
-              <h4 className="text-sm font-semibold text-white">
+              <h4 className="text-base font-heading font-bold text-pencil">
                 {t.create.readyToImportTitle.replace("{count}", String(parsedQuestions.length))}
               </h4>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs font-body text-pencil/70">
                 {invalidQuestionsCount === 0
                   ? t.create.allValidReady
                   : t.create.incompleteWarning.replace("{count}", String(invalidQuestionsCount))}
@@ -641,7 +644,7 @@ export default function CreateMockPage() {
                 size="md"
                 onClick={handleImport}
                 isLoading={isImporting}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto font-heading font-bold"
                 leftIcon={<CheckCircle2 className="w-4 h-4" />}
               >
                 {t.create.importBtn}
@@ -658,8 +661,8 @@ export default function CreateMockPage() {
         title={t.create.incompleteModalTitle}
         description={t.create.incompleteModalDesc}
       >
-        <div className="space-y-3 text-xs sm:text-sm text-gray-300">
-          <div className="p-3 rounded-lg bg-error/10 border border-error/30 text-error flex items-center gap-2">
+        <div className="space-y-3 text-xs sm:text-sm font-body text-pencil/80">
+          <div className="p-3 rounded-wobbly-sm bg-marker-red/10 border-2 border-marker-red text-marker-red flex items-center gap-2 font-heading font-bold">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>
               {t.create.incompleteModalMsg.replace("{count}", String(incompleteCount))}
@@ -671,6 +674,7 @@ export default function CreateMockPage() {
             size="sm"
             variant="primary"
             onClick={() => setIsIncompleteModalOpen(false)}
+            className="font-heading font-bold"
           >
             {t.create.incompleteModalConfirm}
           </Button>
