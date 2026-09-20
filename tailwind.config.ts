@@ -8,29 +8,46 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#090C22",
+        background: "#080A14",
+        canvas: {
+          deep: "#080A14",
+          elevated: "#0D1020",
+          surface: "#11152A",
+        },
         card: {
-          DEFAULT: "#121738",
-          hover: "#181E48",
-          border: "rgba(255, 255, 255, 0.12)",
+          DEFAULT: "#11152A",
+          hover: "#161D3B",
+          border: "rgba(255, 255, 255, 0.10)",
         },
         primary: {
-          DEFAULT: "#FF3366",
-          hover: "#E11D48",
-          accent: "#FDA4AF",
-          glow: "rgba(255, 51, 102, 0.35)",
+          DEFAULT: "#7C5CFF",
+          hover: "#6D4DF0",
+          accent: "#A78BFA",
+          glow: "rgba(124, 92, 255, 0.35)",
+        },
+        electric: {
+          DEFAULT: "#4F7CFF",
+          hover: "#3B6BFF",
+          light: "#6D8DFF",
+          glow: "rgba(79, 124, 255, 0.35)",
+        },
+        lavender: {
+          DEFAULT: "#A78BFA",
+          light: "#C4B5FD",
+          pale: "#EDE9FE",
+          glow: "rgba(167, 139, 250, 0.35)",
         },
         gold: {
-          DEFAULT: "#F59E0B",
-          light: "#FBBF24",
-          bright: "#FEF08A",
-          glow: "rgba(245, 158, 11, 0.35)",
+          DEFAULT: "#F6D58A",
+          light: "#FDE68A",
+          amber: "#F59E0B",
+          glow: "rgba(246, 213, 138, 0.35)",
         },
         violet: {
-          DEFAULT: "#7C3AED",
-          hover: "#6D28D9",
-          light: "#A78BFA",
-          glow: "rgba(124, 58, 237, 0.35)",
+          DEFAULT: "#7C5CFF",
+          hover: "#6D4DF0",
+          light: "#8B7CFF",
+          glow: "rgba(124, 92, 255, 0.35)",
         },
         cyan: {
           DEFAULT: "#06B6D4",
@@ -42,8 +59,8 @@ const config: Config = {
           glow: "rgba(16, 185, 129, 0.25)",
         },
         error: {
-          DEFAULT: "#EF4444",
-          glow: "rgba(239, 68, 68, 0.25)",
+          DEFAULT: "#F43F5E",
+          glow: "rgba(244, 63, 94, 0.25)",
         },
       },
       fontFamily: {
@@ -51,11 +68,14 @@ const config: Config = {
         mono: ["var(--font-geist-mono)", "monospace"],
       },
       boxShadow: {
-        glow: "0 0 25px -4px rgba(255, 51, 102, 0.4)",
-        "glow-sm": "0 0 12px -2px rgba(255, 51, 102, 0.3)",
-        "glow-gold": "0 0 25px -4px rgba(245, 158, 11, 0.45)",
-        "glow-violet": "0 0 25px -4px rgba(124, 58, 237, 0.45)",
+        glow: "0 0 30px -4px rgba(124, 92, 255, 0.45)",
+        "glow-sm": "0 0 15px -2px rgba(124, 92, 255, 0.3)",
+        "glow-violet": "0 0 30px -4px rgba(124, 92, 255, 0.45)",
+        "glow-blue": "0 0 30px -4px rgba(79, 124, 255, 0.45)",
+        "glow-gold": "0 0 30px -4px rgba(246, 213, 138, 0.4)",
+        "glow-lavender": "0 0 25px -4px rgba(167, 139, 250, 0.4)",
         "glow-cyan": "0 0 25px -4px rgba(6, 182, 212, 0.4)",
+        glass: "0 8px 32px 0 rgba(0, 0, 0, 0.4)",
       },
       transitionTimingFunction: {
         spring: "cubic-bezier(0.16, 1, 0.3, 1)",

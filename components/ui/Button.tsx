@@ -31,19 +31,19 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
     const variantStyles = {
       primary:
-        "bg-gradient-to-r from-[#FF3366] to-[#E11D48] hover:from-[#FF4777] hover:to-[#F43F5E] text-white shadow-glow hover:shadow-lg hover:shadow-primary/40 border border-white/20",
+        "bg-gradient-to-r from-[#7C5CFF] via-[#6D4DF0] to-[#4F7CFF] hover:from-[#8B7CFF] hover:to-[#608BFF] text-white shadow-glow hover:shadow-glow-violet border border-white/20",
       secondary:
-        "bg-card/90 hover:bg-card-hover text-gray-100 border border-white/10 hover:border-violet-light/40 shadow-md backdrop-blur-md",
+        "bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/12 hover:border-lavender/40 backdrop-blur-xl shadow-glass",
       outline:
-        "bg-white/[0.04] text-gray-200 border border-white/12 hover:bg-white/[0.08] hover:border-gold-light/60 hover:text-white backdrop-blur-md",
+        "bg-transparent text-gray-200 border border-white/15 hover:bg-white/[0.06] hover:border-lavender/50 hover:text-white backdrop-blur-md",
       gold:
-        "bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-bold shadow-glow-gold hover:shadow-xl hover:shadow-amber-500/30 border border-amber-200/50",
+        "bg-gradient-to-r from-[#F6D58A] via-[#FBBF24] to-[#F59E0B] hover:from-[#FDE68A] hover:to-[#FBBF24] text-slate-950 font-bold shadow-glow-gold border border-amber-200/60",
       violet:
-        "bg-gradient-to-r from-violet via-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-glow-violet hover:shadow-lg hover:shadow-violet/40 border border-white/20",
+        "bg-gradient-to-r from-[#7C5CFF] to-[#6366F1] hover:from-[#8B7CFF] hover:to-[#7C5CFF] text-white shadow-glow-violet border border-white/20",
       ghost:
         "bg-transparent text-gray-300 hover:text-white hover:bg-white/[0.06]",
       danger:
-        "bg-error/20 hover:bg-error/30 text-error border border-error/40 hover:border-error/60",
+        "bg-error/15 hover:bg-error/25 text-rose-300 border border-error/30 hover:border-error/50",
     };
 
     const sizeStyles = {

@@ -3,17 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --background: #090C22;
-  --foreground: #F8FAFC;
+  --background: #080A14;
+  --foreground: #FFFFFF;
 }
 
 body {
   background-color: var(--background);
   background-image: 
-    radial-gradient(ellipse 90% 50% at 50% -15%, rgba(124, 58, 237, 0.28), transparent 70%),
-    radial-gradient(ellipse 60% 40% at 85% 15%, rgba(245, 158, 11, 0.18), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 15% 45%, rgba(6, 182, 212, 0.15), transparent 60%),
-    radial-gradient(circle 900px at 50% 100%, rgba(255, 51, 102, 0.15), transparent 80%);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 92, 255, 0.22), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 90% 20%, rgba(79, 124, 255, 0.16), transparent 60%),
+    radial-gradient(ellipse 50% 50% at 10% 60%, rgba(167, 139, 250, 0.12), transparent 60%),
+    radial-gradient(circle 600px at 50% 100%, rgba(246, 213, 138, 0.08), transparent 75%);
   background-attachment: fixed;
   color: var(--foreground);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
@@ -29,22 +29,35 @@ body {
 
 @keyframes pulseGlow {
   0%, 100% { opacity: 0.65; transform: scale(1); }
-  50% { opacity: 0.95; transform: scale(1.04); }
+  50% { opacity: 0.90; transform: scale(1.03); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .animate-float {
-  animation: floatSlow 5s ease-in-out infinite;
+  animation: floatSlow 6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
 .animate-pulse-glow {
-  animation: pulseGlow 4s ease-in-out infinite;
+  animation: pulseGlow 5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.glass-card {
+  background: rgba(17, 21, 42, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
 }
 
 .glass-panel {
-  background: rgba(18, 23, 56, 0.72);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(13, 16, 32, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Custom scrollbar */
@@ -54,11 +67,11 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #090C22;
+  background: #080A14;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1C234E;
+  background: #1A2045;
   border-radius: 4px;
 }
 
@@ -67,7 +80,16 @@ body {
 }
 
 ::selection {
-  background-color: rgba(255, 51, 102, 0.35);
+  background-color: rgba(124, 92, 255, 0.35);
   color: #FFFFFF;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
