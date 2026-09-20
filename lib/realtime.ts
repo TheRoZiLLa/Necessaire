@@ -7,6 +7,7 @@ import { Player, RevealData, RoomStatus } from "@/types";
 export type RoomEvent =
   | { type: "PLAYER_JOINED"; player: Player }
   | { type: "PLAYER_LEFT"; playerId: string }
+  | { type: "PLAYER_KICKED"; playerId: string; nickname?: string }
   | { type: "ROOM_STARTED"; currentQuestion: number; status: RoomStatus }
   | { type: "ANSWER_PROGRESS"; answeredCount: number; totalPlayers: number }
   | { type: "STATUS_CHANGED"; status: RoomStatus; currentQuestion?: number }

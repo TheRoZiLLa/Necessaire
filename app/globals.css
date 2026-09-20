@@ -3,38 +3,71 @@
 @tailwind utilities;
 
 :root {
-  --background: #0F1117;
-  --foreground: #F3F4F6;
+  --background: #090C22;
+  --foreground: #F8FAFC;
 }
 
 body {
   background-color: var(--background);
+  background-image: 
+    radial-gradient(ellipse 90% 50% at 50% -15%, rgba(124, 58, 237, 0.28), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 15%, rgba(245, 158, 11, 0.18), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 15% 45%, rgba(6, 182, 212, 0.15), transparent 60%),
+    radial-gradient(circle 900px at 50% 100%, rgba(255, 51, 102, 0.15), transparent 80%);
+  background-attachment: fixed;
   color: var(--foreground);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Sleek dark scrollbar */
+/* Apple-smooth transitions & animations */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.04); }
+}
+
+.animate-float {
+  animation: floatSlow 5s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.glass-panel {
+  background: rgba(18, 23, 56, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #0F1117;
+  background: #090C22;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #262B36;
+  background: #1C234E;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #374151;
+  background: #2D3772;
 }
 
 ::selection {
-  background-color: rgba(99, 102, 241, 0.35);
+  background-color: rgba(255, 51, 102, 0.35);
   color: #FFFFFF;
 }
+

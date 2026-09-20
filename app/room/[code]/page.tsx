@@ -24,11 +24,15 @@ import {
   RotateCcw,
   AlertTriangle,
   WifiOff,
+  UserX,
+  Sparkles,
+  MessageSquare,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { useToast } from "@/components/ui/Toast";
-import { getRoomDetails, startRoom, leaveRoom } from "@/lib/room";
+import { getRoomDetails, startRoom, leaveRoom, kickPlayer } from "@/lib/room";
 import {
   submitInitialAnswer,
   setPlayerReady,
@@ -36,6 +40,7 @@ import {
   submitFinalAnswer,
   revealAnswer,
   advanceToNextQuestion,
+  getRound1Answers,
 } from "@/lib/loop";
 import { calculateRoomSummary, startReviewMode, exitReviewMode } from "@/lib/summary";
 import { useRoomRealtime, broadcastRoomEvent, RoomEvent } from "@/lib/realtime";
@@ -50,6 +55,7 @@ import {
   RevealData,
   RoomStatus,
   RoomSummary,
+  Round1AnswerItem,
 } from "@/types";
 
 export default function RoomLobbyPage({
@@ -70,6 +76,14 @@ export default function RoomLobbyPage({
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [isHostDisconnected, setIsHostDisconnected] = useState(false);
+
+  // Kick & Player modal states
+  const [kickingPlayerId, setKickingPlayerId] = useState<string | null>(null);
+  const [showPlayersModal, setShowPlayersModal] = useState(false);
+
+  // Round 1 answers for Discuss & Change phase
+  const [round1Answers, setRound1Answers] = useState<Round1AnswerItem[]>([]);
+  const [loadingRound1Answers, setLoadingRound1Answers] = useState(false);
 
   // Copy states
   const [isCopiedCode, setIsCopiedCode] = useState(false);
@@ -220,6 +234,7 @@ export default function RoomLobbyPage({
     setIsFinalLocked(false);
     setFinalLockedCount(0);
     setRevealData(null);
+    setRound1Answers([]);
   }, []);
 
   // Handle Realtime events
@@ -245,6 +260,26 @@ export default function RoomLobbyPage({
             return prev.filter((p) => p.id !== event.playerId);
           });
           break;
+
+        case "PLAYER_KICKED": {
+          const myId =
+            currentPlayerId ||
+            (typeof window !== "undefined"
+              ? sessionStorage.getItem(`necessaire_player_${roomCode}`)
+              : null);
+          if (myId === event.playerId) {
+            if (typeof window !== "undefined") {
+              sessionStorage.removeItem(`necessaire_player_${roomCode}`);
+              sessionStorage.removeItem(`necessaire_nickname_${roomCode}`);
+            }
+            error(t.room.youWereKicked || "You were removed from the room by the host.", "Removed");
+            router.push("/join");
+            return;
+          }
+          setPlayers((prev) => prev.filter((p) => p.id !== event.playerId));
+          info(t.room.kickedToast.replace("{name}", event.nickname || "Player"));
+          break;
+        }
 
         case "ROOM_STARTED":
           setRoom((prev) =>
@@ -434,6 +469,68 @@ export default function RoomLobbyPage({
   const currentQIndex = (room?.currentQuestion || 1) - 1;
   const currentQuestion = activeQuestionList[currentQIndex] || activeQuestionList[0];
 
+  // Load Round 1 answers for Discuss & Change phase
+  const loadRound1Answers = useCallback(
+    async (qId?: string) => {
+      const targetId = qId || currentQuestion?.id;
+      if (!targetId) return;
+      setLoadingRound1Answers(true);
+      try {
+        const data = await getRound1Answers(roomCode, targetId);
+        setRound1Answers(data);
+      } catch (err) {
+        console.error("Failed to load round 1 answers:", err);
+      } finally {
+        setLoadingRound1Answers(false);
+      }
+    },
+    [roomCode, currentQuestion?.id]
+  );
+
+  // Synchronize Round 1 answers when entering DISCUSSION or CHANGING
+  useEffect(() => {
+    if (
+      (room?.status === "DISCUSSION" || room?.status === "CHANGING") &&
+      currentQuestion?.id
+    ) {
+      loadRound1Answers(currentQuestion.id);
+    }
+  }, [room?.status, currentQuestion?.id, loadRound1Answers]);
+
+  // Restore initial choice from Round 1 answers if user reloaded
+  useEffect(() => {
+    if (round1Answers.length > 0 && currentPlayerId && !selectedInitialChoice) {
+      const myAns = round1Answers.find((a) => a.playerId === currentPlayerId);
+      if (myAns?.initialAnswer) {
+        setSelectedInitialChoice(myAns.initialAnswer);
+      }
+    }
+  }, [round1Answers, currentPlayerId, selectedInitialChoice]);
+
+  // Kick a player from the room (Host only)
+  const handleKickPlayer = async (playerId: string, nickname: string) => {
+    if (!isHost || !currentPlayerId) return;
+    const confirmMsg = t.room.kickConfirm
+      ? t.room.kickConfirm.replace("{name}", nickname)
+      : `Remove ${nickname} from the room?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setKickingPlayerId(playerId);
+    try {
+      const res = await kickPlayer(roomCode, playerId, currentPlayerId);
+      if (res.success) {
+        setPlayers((prev) => prev.filter((p) => p.id !== playerId));
+        success(t.room.kickedToast.replace("{name}", nickname));
+      } else {
+        error(res.error || "Failed to remove player.");
+      }
+    } catch (err: any) {
+      error(err.message || "Error removing player.");
+    } finally {
+      setKickingPlayerId(null);
+    }
+  };
+
   // -------------------------------------------------------------
   // 1. Submit Initial Answer (ANSWERING phase)
   // -------------------------------------------------------------
@@ -465,7 +562,8 @@ export default function RoomLobbyPage({
             status: "DISCUSSION",
           });
           setRoom((prev) => (prev ? { ...prev, status: "DISCUSSION" } : null));
-          info("Everyone has answered! Discuss your answers in Discord.", "Discussion Time");
+          loadRound1Answers(currentQuestion.id);
+          info(t.room.discussNoticeTitle || "Everyone has answered! Discuss your answers in Discord.", "Discussion Time");
         }
       } else {
         error(res.error || "Failed to lock answer. Please try again.");
@@ -478,7 +576,7 @@ export default function RoomLobbyPage({
   };
 
   // -------------------------------------------------------------
-  // 2. Ready in Discussion Phase (DISCUSSION phase)
+  // 2. Ready in Discussion Phase (Optional / Legacy)
   // -------------------------------------------------------------
   const handleToggleReady = async () => {
     if (!currentQuestion || !currentPlayerId) return;
@@ -533,15 +631,12 @@ export default function RoomLobbyPage({
   };
 
   // -------------------------------------------------------------
-  // 3. Final Lock (CHANGING phase)
+  // 3. Final Lock (Discuss & Change phase)
   // -------------------------------------------------------------
   const handleFinalLock = async () => {
     if (!currentQuestion || !currentPlayerId) return;
 
-    const finalChoice =
-      changeMode === "change" && selectedFinalChoice
-        ? selectedFinalChoice
-        : selectedInitialChoice;
+    const finalChoice = selectedFinalChoice || selectedInitialChoice;
 
     if (!finalChoice) {
       error("Please pick an answer before locking.");
@@ -559,6 +654,7 @@ export default function RoomLobbyPage({
 
       if (res.success) {
         setIsFinalLocked(true);
+        setSelectedFinalChoice(finalChoice);
         setFinalLockedCount(res.finalLockedCount);
         await broadcastRoomEvent(roomCode, {
           type: "FINAL_LOCK_PROGRESS",
@@ -566,7 +662,7 @@ export default function RoomLobbyPage({
           totalPlayers: res.totalPlayers,
         });
 
-        success("Final answer locked! Waiting for host to reveal.", "Locked");
+        success(t.room.answer2ndLocked || "Final answer locked! Waiting for host to reveal.", "Locked");
       } else {
         error(res.error || "Failed to submit final answer.");
       }
@@ -859,35 +955,58 @@ export default function RoomLobbyPage({
                 return (
                   <div
                     key={p.id}
-                    className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                    className={`flex items-center justify-between p-3.5 rounded-xl border transition-all duration-300 ease-spring ${
                       p.isHost
-                        ? "bg-primary/[0.08] border-primary/40 text-white"
-                        : "bg-[#0F1117] border-card-border text-gray-200"
+                        ? "bg-primary/[0.12] border-primary/40 text-white shadow-glow-coral"
+                        : "bg-[#121738]/80 border-white/10 text-gray-200 hover:border-white/20"
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-transform ${
                           p.isHost
-                            ? "bg-primary text-white shadow-glow-sm"
-                            : "bg-card-border/70 text-gray-300"
+                            ? "bg-gradient-to-br from-primary to-rose-600 text-white shadow-glow-sm"
+                            : "bg-white/10 text-gold"
                         }`}
                       >
                         {p.nickname.charAt(0).toUpperCase()}
                       </div>
                       <div className="truncate">
                         <span className="text-sm font-medium block truncate">
-                          {p.nickname} {isMe && <span className="text-xs text-primary-accent font-normal">{t.room.youBadge}</span>}
+                          {p.nickname}{" "}
+                          {isMe && (
+                            <span className="text-xs text-cyan font-normal">
+                              {t.room.youBadge}
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>
 
-                    {p.isHost && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-accent uppercase tracking-wider shrink-0 bg-primary/10 px-2 py-0.5 rounded border border-primary/20">
-                        <Crown className="w-3 h-3 text-amber-400" />
-                        {t.room.hostBadge}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {p.isHost && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-gold uppercase tracking-wider shrink-0 bg-gold/10 px-2 py-0.5 rounded-full border border-gold/30 shadow-glow-gold">
+                          <Crown className="w-3 h-3 text-amber-400" />
+                          {t.room.hostBadge}
+                        </span>
+                      )}
+
+                      {isHost && !p.isHost && (
+                        <button
+                          type="button"
+                          onClick={() => handleKickPlayer(p.id, p.nickname)}
+                          disabled={kickingPlayerId === p.id}
+                          title={t.room.kickBtn || "เตะออก"}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/15 border border-transparent hover:border-red-500/30 transition-all active:scale-95"
+                        >
+                          {kickingPlayerId === p.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                          ) : (
+                            <UserX className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -1091,8 +1210,8 @@ export default function RoomLobbyPage({
       )}
 
       {/* Top Header: Question Progress & Room Status */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-card-border/60 pb-3 sm:pb-4">
-        <div className="flex items-center gap-2.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-white/10 pb-3 sm:pb-4">
+        <div className="flex flex-wrap items-center gap-2.5">
           <span className="text-base sm:text-lg font-bold text-white font-mono">
             {isReviewMode ? t.room.reviewModeQ : "Q"} {currentQIndex + 1} / {totalQuestions}
           </span>
@@ -1109,31 +1228,36 @@ export default function RoomLobbyPage({
           <button
             type="button"
             onClick={() => setUseThaiChoices(!useThaiChoices)}
-            className="text-[11px] px-2 py-0.5 rounded border border-card-border bg-card/60 text-gray-300 hover:text-white hover:border-primary/50 transition-colors flex items-center gap-1 font-mono"
+            className="text-[11px] px-2 py-0.5 rounded-lg border border-white/10 bg-white/[0.04] text-gray-300 hover:text-white hover:border-primary/50 transition-colors flex items-center gap-1 font-mono"
             title="สลับการแสดงผลตัวเลือก A-B-C-D และ ก-ข-ค-ง"
           >
             <span>{t.room.choiceToggle}</span>
-            <span className="font-bold text-primary-accent">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</span>
+            <span className="font-bold text-gold">{useThaiChoices ? "ก ข ค ง" : "A B C D"}</span>
+          </button>
+
+          {/* Players count button */}
+          <button
+            type="button"
+            onClick={() => setShowPlayersModal(true)}
+            className="text-[11px] px-2.5 py-0.5 rounded-lg border border-white/10 bg-white/[0.04] text-gray-300 hover:text-white hover:border-cyan/50 transition-colors flex items-center gap-1.5 font-mono"
+            title="ดูผู้เล่นในห้อง"
+          >
+            <Users className="w-3.5 h-3.5 text-cyan" />
+            <span>{players.length}</span>
           </button>
         </div>
 
         {/* Phase Pill */}
         <div className="flex items-center gap-2">
           {room.status === "ANSWERING" && (
-            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-primary/20 text-primary-accent border border-primary/30 uppercase tracking-wider">
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-primary/20 text-primary-accent border border-primary/30 uppercase tracking-wider shadow-glow-coral">
               {t.room.phase1Badge}
             </span>
           )}
-          {room.status === "DISCUSSION" && (
-            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-wider flex items-center gap-1.5">
-              <DiscordIcon className="w-3.5 h-3.5 text-[#5865F2]" />
-              {t.room.phase2Badge}
-            </span>
-          )}
-          {room.status === "CHANGING" && (
-            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider flex items-center gap-1.5">
-              <RefreshCw className="w-3.5 h-3.5" />
-              {t.room.phase3Badge}
+          {(room.status === "DISCUSSION" || room.status === "CHANGING") && (
+            <span className="px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider flex items-center gap-1.5 shadow-glow-gold">
+              <Sparkles className="w-3.5 h-3.5 text-gold animate-pulse" />
+              {t.room.phaseDiscussChangeBadge || t.room.phase2Badge}
             </span>
           )}
           {room.status === "REVEAL" && (
@@ -1144,6 +1268,89 @@ export default function RoomLobbyPage({
           )}
         </div>
       </div>
+
+      {/* Active Game Players Modal */}
+      {showPlayersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#121738] border border-white/15 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-cyan" />
+                <h3 className="text-base font-bold text-white">
+                  {t.room.playersJoined} ({players.length})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPlayersModal(false)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+              {players.map((p) => {
+                const isMe = p.id === currentPlayerId;
+                return (
+                  <div
+                    key={p.id}
+                    className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between text-sm"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                          p.isHost
+                            ? "bg-primary text-white"
+                            : "bg-white/10 text-gold"
+                        }`}
+                      >
+                        {p.nickname.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="truncate font-medium text-white">
+                        {p.nickname} {isMe && <span className="text-xs text-cyan">({t.room.youBadge})</span>}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {p.isHost && (
+                        <span className="text-[10px] font-bold text-gold uppercase px-2 py-0.5 rounded-full bg-gold/15 border border-gold/30">
+                          {t.room.hostBadge}
+                        </span>
+                      )}
+                      {isHost && !p.isHost && (
+                        <button
+                          type="button"
+                          onClick={() => handleKickPlayer(p.id, p.nickname)}
+                          disabled={kickingPlayerId === p.id}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/15 transition-colors"
+                          title={t.room.kickBtn}
+                        >
+                          {kickingPlayerId === p.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                          ) : (
+                            <UserX className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-2 border-t border-white/10 flex justify-end">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowPlayersModal(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Question Card */}
       <Card className="border-card-border shadow-xl">
@@ -1191,16 +1398,16 @@ export default function RoomLobbyPage({
               </div>
 
               {/* Progress & Lock Button */}
-              <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="text-xs text-gray-400 flex items-center gap-2">
                   <span className="font-semibold text-white">
                     {answeredCount} / {players.length}
                   </span>
                   <span>{t.room.playersAnswered}</span>
                   {isInitialLocked && (
-                    <span className="inline-flex items-center gap-1 text-success font-medium ml-2">
+                    <span className="inline-flex items-center gap-1 text-success font-semibold ml-2">
                       <Lock className="w-3.5 h-3.5" />
-                      {t.room.answerLocked}
+                      {t.room.answer1stLocked || t.room.answerLocked}
                     </span>
                   )}
                 </div>
@@ -1212,14 +1419,16 @@ export default function RoomLobbyPage({
                     disabled={!selectedInitialChoice}
                     isLoading={isSubmittingInitial}
                     onClick={handleLockInitialAnswer}
-                    className="w-full sm:w-auto py-3 text-sm font-semibold"
+                    className="w-full sm:w-auto py-3 text-sm font-semibold shadow-glow-coral"
                     leftIcon={<Lock className="w-4 h-4" />}
                   >
-                    {t.room.lockAnswerBtn}
+                    {t.room.lockAnswer1stBtn || t.room.lockAnswerBtn}
                   </Button>
                 ) : (
                   <span className="text-xs text-gray-400 italic">
-                    {t.room.waitingAllLock}
+                    {t.room.waitingAll1st
+                      ? t.room.waitingAll1st.replace("{answered}", String(answeredCount)).replace("{total}", String(players.length))
+                      : t.room.waitingAllLock}
                   </span>
                 )}
               </div>
@@ -1227,175 +1436,267 @@ export default function RoomLobbyPage({
           )}
 
           {/* =======================================================
-              PHASE 2: DISCUSSION
+              PHASE 2: DISCUSS & CHANGE (Combined Screen)
               ======================================================= */}
-          {room.status === "DISCUSSION" && (
-            <div className="space-y-6 py-2 text-center">
-              <div className="p-5 sm:p-6 rounded-xl bg-[#5865F2]/10 border border-[#5865F2]/30 space-y-3">
-                <div className="w-12 h-12 rounded-full bg-[#5865F2]/20 text-[#5865F2] flex items-center justify-center mx-auto">
+          {(room.status === "DISCUSSION" || room.status === "CHANGING") && (
+            <div className="space-y-6">
+              {/* Discord Voice chat banner */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#5865F2]/10 border border-[#5865F2]/30 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                <div className="w-11 h-11 rounded-xl bg-[#5865F2]/20 text-[#5865F2] flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(88,101,242,0.3)]">
                   <DiscordIcon className="w-6 h-6" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-bold text-white">
-                  {t.room.discussNoticeTitle}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-300 max-w-md mx-auto leading-relaxed">
-                  {t.room.discussNoticeDesc}
-                </p>
-              </div>
-
-              {/* Ready Button for players */}
-              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-card-border/60">
-                <div className="text-xs text-gray-400">
-                  <strong className="text-white">{readyCount}</strong> / {players.length} {t.room.playersReady}
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full sm:w-auto">
-                  <Button
-                    variant={isReady ? "secondary" : "primary"}
-                    size="md"
-                    isLoading={isUpdatingReady}
-                    onClick={handleToggleReady}
-                    className="w-full sm:w-auto"
-                    leftIcon={isReady ? <Check className="w-4 h-4 text-success" /> : undefined}
-                  >
-                    {isReady ? t.room.readyBtnDone : t.room.readyBtn}
-                  </Button>
-
-                  {/* Host Proceed Action */}
-                  {isHost && (
-                    <Button
-                      variant="primary"
-                      size="md"
-                      isLoading={isProceedingToChange}
-                      onClick={handleProceedToChange}
-                      className="w-full sm:w-auto shadow-glow"
-                      rightIcon={<ArrowRight className="w-4 h-4" />}
-                    >
-                      {t.room.proceedChangeBtn}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* =======================================================
-              PHASE 3: CHANGING (Keep or Change)
-              ======================================================= */}
-          {room.status === "CHANGING" && (
-            <div className="space-y-6">
-              <div className="p-4 rounded-xl bg-card-border/20 border border-card-border flex items-center justify-between">
-                <span className="text-xs text-gray-400">{t.room.initialWas}</span>
-                <span className="px-3 py-1 rounded-lg bg-primary/20 text-primary-accent font-bold font-mono text-sm border border-primary/30">
-                  {t.room.optionWord} {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : "N/A"}
-                </span>
-              </div>
-
-              {/* Choice Mode Selection: Keep or Change */}
-              {!isFinalLocked ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setChangeMode("keep");
-                        setSelectedFinalChoice(selectedInitialChoice);
-                      }}
-                      className={`p-4 rounded-xl border text-sm font-semibold transition-all min-h-[54px] active:scale-[0.99] ${
-                        changeMode === "keep"
-                          ? "border-primary bg-primary/20 text-white shadow-glow-sm"
-                          : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-500"
-                      }`}
-                    >
-                      {t.room.keepBtn} {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : (useThaiChoices ? "ก" : "A")}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setChangeMode("change")}
-                      className={`p-4 rounded-xl border text-sm font-semibold transition-all min-h-[54px] active:scale-[0.99] ${
-                        changeMode === "change"
-                          ? "border-primary bg-primary/20 text-white shadow-glow-sm"
-                          : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-500"
-                      }`}
-                    >
-                      {t.room.changeBtn}
-                    </button>
-                  </div>
-
-                  {/* If user clicked Change: show choice list */}
-                  {changeMode === "change" && (
-                    <div className="space-y-2 pt-2 animate-in fade-in duration-200">
-                      <span className="text-xs text-gray-400 font-medium block">
-                        {t.room.selectRevised}
-                      </span>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {choices.map((c) => {
-                          const isSelected = selectedFinalChoice === c.letter;
-
-                          return (
-                            <button
-                              key={c.letter}
-                              type="button"
-                              onClick={() => setSelectedFinalChoice(c.letter)}
-                              className={`p-3 rounded-lg border text-left text-xs sm:text-sm flex items-start gap-2.5 transition-all min-h-[48px] ${
-                                isSelected
-                                  ? "border-primary bg-primary/20 text-white"
-                                  : "border-card-border bg-[#0F1117] text-gray-300 hover:border-gray-600"
-                              }`}
-                            >
-                              <span className="font-bold text-primary-accent">{formatChoiceLetter(c.letter, useThaiChoices)}.</span>
-                              <span className="truncate">{c.text}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Final Lock action */}
-                  <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="text-xs text-gray-400">
-                      {t.room.hostRevealControl.replace("{locked}", String(finalLockedCount)).replace("{total}", String(players.length))}
-                    </div>
-                    <Button
-                      variant="primary"
-                      size="md"
-                      disabled={!changeMode || (changeMode === "change" && !selectedFinalChoice)}
-                      isLoading={isSubmittingFinal}
-                      onClick={handleFinalLock}
-                      className="w-full sm:w-auto"
-                      leftIcon={<Lock className="w-4 h-4" />}
-                    >
-                      {t.room.finalLockBtn}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-4 rounded-xl bg-success/10 border border-success/30 text-center space-y-2">
-                  <div className="flex items-center justify-center gap-1.5 text-success font-semibold text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>{t.room.finalLockedNotice}</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    {t.room.waitingReveal.replace("{locked}", String(finalLockedCount)).replace("{total}", String(players.length))}
+                <div className="space-y-1 flex-1">
+                  <h3 className="text-base sm:text-lg font-bold text-white flex items-center justify-center sm:justify-start gap-2">
+                    <span>{t.room.discussNoticeTitle}</span>
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+                    {t.room.round1AnswersDesc || t.room.discussNoticeDesc}
                   </p>
                 </div>
-              )}
+              </div>
 
-              {/* Host Reveal Action */}
-              {isHost && (
-                <div className="pt-4 border-t border-card-border/60 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <span className="text-xs text-gray-400">
-                    {t.room.hostRevealControl.replace("{locked}", String(finalLockedCount)).replace("{total}", String(players.length))}
+              {/* 1. Who answered what in Round 1 */}
+              <div className="p-5 sm:p-6 rounded-2xl bg-[#121738]/80 border border-white/10 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-gold animate-pulse" />
+                    <h4 className="text-sm sm:text-base font-bold text-white">
+                      {t.room.round1AnswersTitle}
+                    </h4>
+                  </div>
+                  {loadingRound1Answers && (
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                      <span>{t.mock.loading}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tally Breakdown Bar */}
+                {round1Answers.length > 0 && (
+                  <div className="space-y-2">
+                    <span className="text-xs font-semibold text-gray-400 block">
+                      {t.room.tallyLabel}
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {choices.map((c) => {
+                        const count = round1Answers.filter((a) => a.initialAnswer === c.letter).length;
+                        const pct = round1Answers.length > 0 ? Math.round((count / round1Answers.length) * 100) : 0;
+                        const isMyPick = selectedInitialChoice === c.letter;
+
+                        return (
+                          <div
+                            key={c.letter}
+                            className={`p-2.5 rounded-xl border flex flex-col justify-between transition-all duration-300 ease-spring ${
+                              isMyPick
+                                ? "bg-primary/15 border-primary/40 shadow-glow-coral"
+                                : "bg-white/[0.03] border-white/5"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-sm text-gold font-mono">
+                                {t.room.optionWord} {formatChoiceLetter(c.letter, useThaiChoices)}
+                              </span>
+                              {isMyPick && (
+                                <span className="text-[10px] text-cyan font-bold uppercase">
+                                  {t.room.youBadge}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1 flex items-baseline justify-between">
+                              <span className="text-lg font-black text-white font-mono">{count}</span>
+                              <span className="text-xs text-gray-400 font-mono">{pct}%</span>
+                            </div>
+                            <div className="w-full bg-white/10 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  isMyPick ? "bg-primary" : "bg-gold"
+                                }`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Players Choice Badges */}
+                <div className="space-y-2 pt-2 border-t border-white/10">
+                  <span className="text-xs font-semibold text-gray-400 block">
+                    {t.room.whoAnsweredWhat} ({round1Answers.length})
                   </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {round1Answers.map((item) => {
+                      const isMe = item.playerId === currentPlayerId;
+                      return (
+                        <div
+                          key={item.playerId}
+                          className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition-all ${
+                            isMe
+                              ? "bg-cyan/10 border-cyan/40 text-white shadow-glow-cyan"
+                              : "bg-white/[0.04] border-white/10 text-gray-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-6 h-6 rounded-lg bg-white/10 text-gold flex items-center justify-center font-bold text-[11px] shrink-0">
+                              {item.nickname.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="truncate font-medium">
+                              {item.nickname} {isMe && <span className="text-cyan font-normal">{t.room.youBadge}</span>}
+                            </span>
+                          </div>
+
+                          {item.initialAnswer ? (
+                            <span className="px-2.5 py-0.5 rounded-lg bg-gold/15 text-gold font-bold font-mono border border-gold/30 shrink-0 shadow-glow-gold">
+                              {t.room.optionWord} {formatChoiceLetter(item.initialAnswer, useThaiChoices)}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-gray-500 italic shrink-0">
+                              {t.room.noAnswerYet}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Direct Change / Confirm Answer Card */}
+              <div className="p-5 sm:p-6 rounded-2xl bg-[#121738]/90 border border-white/10 space-y-4 shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/10">
+                  <div className="space-y-0.5">
+                    <h4 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4 text-cyan" />
+                      <span>{t.room.changeDirectHelp}</span>
+                    </h4>
+                    <p className="text-xs text-gray-400">
+                      {t.room.initialWas}{" "}
+                      <strong className="text-gold font-mono">
+                        {t.room.optionWord} {selectedInitialChoice ? formatChoiceLetter(selectedInitialChoice, useThaiChoices) : "-"}
+                      </strong>
+                    </p>
+                  </div>
+
+                  {isFinalLocked && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-success bg-success/15 px-3 py-1 rounded-full border border-success/30">
+                      <CheckCircle2 className="w-4 h-4" />
+                      {t.room.answer2ndLocked}
+                    </span>
+                  )}
+                </div>
+
+                {!isFinalLocked ? (
+                  <div className="space-y-4">
+                    {/* Choice List for Round 2 */}
+                    <div className="space-y-2.5">
+                      {choices.map((c) => {
+                        const activeFinalChoice = selectedFinalChoice || selectedInitialChoice;
+                        const isSelected = activeFinalChoice === c.letter;
+                        const isOriginal = selectedInitialChoice === c.letter;
+
+                        return (
+                          <button
+                            key={c.letter}
+                            type="button"
+                            onClick={() => setSelectedFinalChoice(c.letter)}
+                            className={`w-full text-left p-3.5 rounded-xl border flex items-start justify-between gap-3 transition-all select-none active:scale-[0.99] duration-200 ease-spring ${
+                              isSelected
+                                ? "border-primary bg-primary/15 text-white shadow-glow-coral"
+                                : "border-white/10 bg-white/[0.03] text-gray-300 hover:border-white/20 hover:bg-white/[0.06]"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3 min-w-0">
+                              <span
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 transition-colors ${
+                                  isSelected
+                                    ? "bg-primary text-white"
+                                    : "bg-white/10 text-gray-400"
+                                }`}
+                              >
+                                {formatChoiceLetter(c.letter, useThaiChoices)}
+                              </span>
+                              <span className="text-sm sm:text-base pt-0.5 leading-snug">{c.text}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+                              {isOriginal && (
+                                <span className="text-[10px] px-2 py-0.5 rounded bg-white/10 text-gray-400 border border-white/10">
+                                  {t.room.initialWas.replace(":", "")}
+                                </span>
+                              )}
+                              {isSelected && (
+                                <CheckCircle2 className="w-5 h-5 text-primary-accent" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Lock 2nd Button & Counter */}
+                    <div className="pt-3 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-xs text-gray-400 flex items-center gap-2">
+                        <span className="font-semibold text-white">{finalLockedCount} / {players.length}</span>
+                        <span>{t.room.playersAnswered}</span>
+                      </div>
+
+                      <Button
+                        variant="primary"
+                        size="md"
+                        disabled={!selectedFinalChoice && !selectedInitialChoice}
+                        isLoading={isSubmittingFinal}
+                        onClick={handleFinalLock}
+                        className="w-full sm:w-auto py-3 shadow-glow-coral font-semibold"
+                        leftIcon={<Lock className="w-4 h-4" />}
+                      >
+                        {t.room.lockAnswer2ndBtn}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-success/10 border border-success/30 text-center space-y-1.5">
+                    <div className="flex items-center justify-center gap-1.5 text-success font-semibold text-sm">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{t.room.finalLockedNotice}</span>
+                    </div>
+                    <p className="text-xs text-gray-300">
+                      {t.room.optionWord}{" "}
+                      <strong className="text-white font-mono text-sm">
+                        {formatChoiceLetter(selectedFinalChoice || selectedInitialChoice || "A", useThaiChoices)}
+                      </strong>
+                    </p>
+                    <p className="text-xs text-gray-400 pt-1">
+                      {t.room.waitingReveal.replace("{locked}", String(finalLockedCount)).replace("{total}", String(players.length))}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Host Instant Reveal Control */}
+              {isHost && (
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-gold/10 via-primary/10 to-violet/10 border border-gold/30 shadow-glow-gold flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1 text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start gap-2">
+                      <Crown className="w-4 h-4 text-gold" />
+                      <span className="text-sm font-bold text-white">
+                        {t.room.hostRevealInstant}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gold/90 font-mono">
+                      {t.room.hostRevealLiveCount.replace("{locked}", String(finalLockedCount)).replace("{total}", String(players.length))}
+                    </p>
+                  </div>
+
                   <Button
-                    variant="primary"
-                    size="md"
+                    variant="gold"
+                    size="lg"
                     onClick={handleRevealAnswer}
                     isLoading={isRevealing}
-                    className="w-full sm:w-auto shadow-glow"
-                    leftIcon={<Eye className="w-4 h-4" />}
+                    className="w-full sm:w-auto shadow-glow-gold py-3 px-6 text-sm font-bold"
+                    leftIcon={<Eye className="w-5 h-5" />}
                   >
                     {t.room.revealBtn}
                   </Button>
@@ -1427,11 +1728,11 @@ export default function RoomLobbyPage({
 
               {/* Explanation Card */}
               {revealData.explanation && (
-                <div className="p-4 rounded-xl bg-card-border/20 border border-card-border space-y-1.5">
-                  <span className="text-xs font-semibold text-primary-accent uppercase tracking-wider block">
+                <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/10 space-y-2">
+                  <span className="text-xs font-bold text-gold uppercase tracking-wider block">
                     {t.room.explanation}
                   </span>
-                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-line">
+                  <p className="text-xs sm:text-sm text-gray-200 leading-relaxed whitespace-pre-line">
                     {revealData.explanation}
                   </p>
                 </div>
@@ -1446,10 +1747,10 @@ export default function RoomLobbyPage({
                   {revealData.results.map((r) => (
                     <div
                       key={r.playerId}
-                      className={`p-3 rounded-lg border flex items-center justify-between text-xs sm:text-sm ${
+                      className={`p-3 rounded-xl border flex items-center justify-between text-xs sm:text-sm transition-all duration-300 ease-spring ${
                         r.isCorrect
-                          ? "bg-success/[0.06] border-success/30 text-white"
-                          : "bg-error/[0.06] border-error/30 text-gray-300"
+                          ? "bg-success/[0.08] border-success/30 text-white shadow-[0_0_15px_rgba(16,185,129,0.15)]"
+                          : "bg-error/[0.08] border-error/30 text-gray-300"
                       }`}
                     >
                       <span className="font-medium truncate max-w-[120px]">
@@ -1458,7 +1759,9 @@ export default function RoomLobbyPage({
                       <div className="flex items-center gap-2 font-mono font-semibold">
                         <span>{r.initialAnswer ? formatChoiceLetter(r.initialAnswer, useThaiChoices) : "-"}</span>
                         <ArrowRight className="w-3.5 h-3.5 text-gray-500" />
-                        <span>{r.finalAnswer ? formatChoiceLetter(r.finalAnswer, useThaiChoices) : "-"}</span>
+                        <span className={r.isCorrect ? "text-success font-bold" : "text-error"}>
+                          {r.finalAnswer ? formatChoiceLetter(r.finalAnswer, useThaiChoices) : "-"}
+                        </span>
                         {r.isCorrect ? (
                           <CheckCircle2 className="w-4 h-4 text-success" />
                         ) : (

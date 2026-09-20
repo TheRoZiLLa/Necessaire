@@ -14,9 +14,9 @@ export function Card({
   return (
     <div
       className={cn(
-        "bg-card rounded-xl border border-card-border shadow-md overflow-hidden transition-all duration-200",
+        "bg-card/75 backdrop-blur-xl rounded-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.36)] overflow-hidden transition-all duration-300 ease-spring",
         hoverable &&
-          "hover:border-primary-accent/40 hover:shadow-glow-sm hover:translate-y-[-1px]",
+          "hover:border-gold-light/40 hover:shadow-[0_8px_32px_0_rgba(245,158,11,0.2)] hover:translate-y-[-2px]",
         className
       )}
       {...props}
@@ -33,7 +33,7 @@ export function CardHeader({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("px-6 py-5 border-b border-card-border/50", className)}
+      className={cn("px-6 py-5 border-b border-white/10", className)}
       {...props}
     >
       {children}

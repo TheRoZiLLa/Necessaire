@@ -7,6 +7,7 @@ import {
   PlayerRevealResult,
   RevealData,
   RoomStatus,
+  Round1AnswerItem,
 } from "@/types";
 
 const LOCAL_STORAGE_ANSWERS_KEY = "necessaire_answers";
@@ -507,3 +508,61 @@ export function getPlayerAnswerForQuestion(
     ) || null
   );
 }
+
+/**
+ * Retrieve locked Round 1 answers for all players for the specified question.
+ */
+export async function getRound1Answers(
+  roomCode: string,
+  questionId: string
+): Promise<Round1AnswerItem[]> {
+  const normalizedCode = roomCode.trim().toUpperCase();
+  const roomDetails = await getRoomDetails(normalizedCode);
+  if (!roomDetails) return [];
+
+  const { room, players } = roomDetails;
+  let answersList: { playerId: string; initialAnswer: ChoiceLetter | null }[] = [];
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        const { data } = await supabase
+          .from("answers")
+          .select("player_id, initial_answer")
+          .eq("room_id", room.id)
+          .eq("question_id", questionId)
+          .eq("locked", true);
+
+        if (data) {
+          answersList = data.map((d: any) => ({
+            playerId: d.player_id,
+            initialAnswer: d.initial_answer as ChoiceLetter,
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn("Supabase getRound1Answers error:", err);
+    }
+  }
+
+  if (answersList.length === 0) {
+    const localAnswers = getLocalAnswers();
+    answersList = localAnswers
+      .filter((a) => a.roomId === room.id && a.questionId === questionId && a.locked)
+      .map((a) => ({
+        playerId: a.playerId,
+        initialAnswer: a.initialAnswer,
+      }));
+  }
+
+  return players.map((p) => {
+    const ans = answersList.find((a) => a.playerId === p.id);
+    return {
+      playerId: p.id,
+      nickname: p.nickname,
+      initialAnswer: ans?.initialAnswer || null,
+    };
+  });
+}
+

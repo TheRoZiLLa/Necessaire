@@ -389,7 +389,7 @@ export default function CreateMockPage() {
         <CardContent className="space-y-4">
           <textarea
             rows={8}
-            className="w-full bg-[#0F1117] text-gray-100 placeholder-gray-500 rounded-lg border border-card-border p-3.5 text-xs sm:text-sm font-mono leading-relaxed outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+            className="w-full bg-[#121738]/80 text-white placeholder-gray-400 rounded-xl border border-white/15 p-4 text-xs sm:text-sm font-mono leading-relaxed outline-none focus:border-primary focus:ring-2 focus:ring-primary/40 focus:bg-[#161D45] focus:shadow-glow-coral transition-all backdrop-blur-md"
             placeholder={`1. ใครเป็นนายกรัฐมนตรีคนแรกของประเทศไทย?
    ก. พระยามโนปกรณ์นิติธาดา
    ข. พันเอก พระยาพหลพลพยุหเสนา

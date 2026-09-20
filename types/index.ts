@@ -104,6 +104,12 @@ export interface PlayerRevealResult {
   isCorrect: boolean;
 }
 
+export interface Round1AnswerItem {
+  playerId: string;
+  nickname: string;
+  initialAnswer: ChoiceLetter | null;
+}
+
 export interface RevealData {
   questionId: string;
   correctAnswer: ChoiceLetter;

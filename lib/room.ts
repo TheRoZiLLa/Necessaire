@@ -1,5 +1,6 @@
 import { getSupabaseClient, isSupabaseConfigured } from "./supabase";
 import { getMockById } from "./storage";
+import { broadcastRoomEvent } from "./realtime";
 import { Room, Player, RoomDetails, RoomStatus } from "@/types";
 
 const LOCAL_STORAGE_ROOMS_KEY = "necessaire_rooms";
@@ -440,3 +441,59 @@ export async function leaveRoom(
   const players = getLocalPlayers().filter((p) => p.id !== playerId);
   saveLocalPlayers(players);
 }
+
+/**
+ * Host kicks a player from the room.
+ */
+export async function kickPlayer(
+  roomCode: string,
+  playerIdToKick: string,
+  hostPlayerId: string
+): Promise<{ success: boolean; error?: string }> {
+  const normalizedCode = roomCode.trim().toUpperCase();
+  const details = await getRoomDetails(normalizedCode, hostPlayerId);
+  if (!details) {
+    return { success: false, error: "Room not found." };
+  }
+
+  const hostPlayer = details.players.find((p) => p.id === hostPlayerId);
+  if (!hostPlayer || !hostPlayer.isHost) {
+    return { success: false, error: "Only the host can remove players." };
+  }
+
+  const targetPlayer = details.players.find((p) => p.id === playerIdToKick);
+  if (!targetPlayer) {
+    return { success: false, error: "Player not found in room." };
+  }
+
+  if (targetPlayer.isHost) {
+    return { success: false, error: "The host cannot be kicked." };
+  }
+
+  // Delete from Supabase
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = getSupabaseClient();
+      if (supabase) {
+        await supabase.from("players").delete().eq("id", playerIdToKick);
+        await supabase.from("answers").delete().eq("player_id", playerIdToKick).eq("room_id", details.room.id);
+      }
+    } catch (err: any) {
+      console.warn("Supabase kick player failed:", err.message);
+    }
+  }
+
+  // Remove from local storage
+  const players = getLocalPlayers().filter((p) => p.id !== playerIdToKick);
+  saveLocalPlayers(players);
+
+  // Broadcast kick event
+  await broadcastRoomEvent(normalizedCode, {
+    type: "PLAYER_KICKED",
+    playerId: playerIdToKick,
+    nickname: targetPlayer.nickname,
+  });
+
+  return { success: true };
+}
+

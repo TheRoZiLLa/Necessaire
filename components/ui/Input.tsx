@@ -48,8 +48,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             disabled={disabled}
             className={cn(
-              "w-full bg-[#0F1117] text-gray-100 placeholder-gray-500 rounded-lg border border-card-border px-3.5 py-2.5 text-sm transition-colors duration-150 outline-none",
-              "focus:border-primary focus:ring-1 focus:ring-primary",
+              "w-full bg-[#121738]/80 text-white placeholder-gray-400 rounded-xl border border-white/15 px-4 py-2.5 text-sm transition-all duration-200 outline-none backdrop-blur-md",
+              "focus:border-primary focus:ring-2 focus:ring-primary/40 focus:bg-[#161D45] focus:shadow-glow-coral",
               leftIcon && "pl-10",
               rightIcon && "pr-10",
               error && "border-error focus:border-error focus:ring-error text-error/90",
